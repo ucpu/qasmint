@@ -21,7 +21,16 @@ This program generates 100 random numbers and prints them to output.
 
 randgen.qasm:
 ```
-# todo
+function Main
+set I 0
+set T 100
+label Loop
+rand J
+write J
+writeln
+inc I
+lt z I T
+condjmp Loop
 ```
 
 ## Sort numbers
@@ -68,7 +77,7 @@ When starting a program:
 - all stacks and queues are empty
 - all tapes, if enabled, have one element, the value of the element is zero, and the pointer is set to point to the element (position zero)
 - all elements in all memory pools are initialized with zeroes, unless specified otherwise
-- the call stack is initialized with a call to _main_ function
+- the call stack is initialized with a call to _Main_ function
 
 A program may also be started with some public registers and some memory pools already populated with data, for example with decoded image pixels.
 
@@ -81,8 +90,8 @@ Each line is limited to about 100 characters.
 The program may consist of restricted set of characters:
 - alphabet: `A` through `Z` and `a` through `z` - the case is important in all places
 - digits: `0` through `9`
-- special characters: `-`, `+`, `.`, `_`, `@`, `;`, `#`
-- characters allowed inside comments only: `*`, `/`, `,`, `(`, `)`, `?`, `!`, `:`
+- special characters: ` `, `-`, `+`, `.`, `_`, `@`, `;`, `#`
+- characters allowed inside comments only: `*`, `/`, `,`, `(`, `)`, `<`, `>`, `?`, `!`, `:`
 
 If line contains `#`, that character and the rest of the line is not interpreted and can be used to convey the meaning of the program.
 Comments are subject to the restricted set of characters too.
@@ -91,48 +100,54 @@ There are no multi-line comments.
 Multiple instructions can be on one line, separated by `;`.
 Last instruction on a line may NOT end with `;`.
 
-## Macros
+## Register instructions
 
-The program is subject to macro expansion.
-Macros are generally used to provide additional instructions which provide convenient syntax for commonly used patterns.
-Macro expansion is context aware - the expansion may depend on multiple tokens and, conversely, may expand into multiple tokens too.
-The program may NOT define new macros - they are built-in in the interpreter.
-You may configure `qasmint` to output fully expanded program.
+*reset* [dst] - set *register* [dst] to zero.
 
-Generally, when multiple variants of same instruction exists, the real instructions end with `_` and the convenient function without `_`.
-Directly using instructions with `_` is allowed too.
+*set* [dst] [literal] - set *register* [dst] to the unsigned integer [literal].
 
-In the following sections, [variable] are macro parameters and are expanded accordingly.
+*iset* [dst] [literal] - set *register* [dst] to the signed integer [literal].
 
-> _Example:_ `inc [QB]` is expanded to `load [a] [QB]; inc [a]; store [a] [QB]`, which is further expanded to `# todo`.
+*fset* [dst] [literal] - set *register* [dst] to the floating point number [literal].
+
+*copy* [dst] [src] - copy value from *register* [src] into *register* [dst].
+
+*condrst* [dst] - if value in `z` evaluates true, set *register* [dst] to zero, otherwise do nothing.
+
+*condset* [dst] [literal] - if value in `z` evaluates true, set *register* [dst] to the unsigned integer [literal], otherwise do nothing.
+
+*condiset* [dst] [literal] - if value in `z` evaluates true, set *register* [dst] to the signed integer [literal], otherwise do nothing.
+
+*condfset* [dst] [literal] - if value in `z` evaluates true, set *register* [dst] to the floating point number [literal], otherwise do nothing.
+
+*condcpy* [dst] [src] - if value in `z` evaluates true, copy value from *register* [src] into *register* [dst], otherwise do nothing.
+
+*indcpy* - copy value from register whose index is read from `s`, into register whose index is read from `d`.
+This instruction terminates the program if either of the indices is invalid.
 
 ## Arithmetic instructions
 
-*add*, *sub*, *mul*, *div*, *mod* [dst] [left] [right] - signed integer arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
-Overflows are silently ignored.
+Overflows, underflows etc. are silently ignored.
+
+*add*, *sub*, *mul*, *div*, *mod* [dst] [left] [right] - unsigned integer arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
 Division by zero terminates the program.
 
-*abs* [dst] [src] - signed integer arithmetic operations, reads its parameter from [src] and stores the result in [dst].
-Overflows are silently ignored.
+*inc*, *dec* [dst] - unsigned integer arithmetic operations, update value in [dst] in place.
 
-*inc*, *dec* [src] - integer increment and decrement, updates the [src] by one.
-Overflows are silently ignored.
-
-*addu*, *subu*, *mulu*, *divu*, *modu* [dst] [left] [right] - unsigned integer arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
-Overflows are silently ignored.
+*iadd*, *isub*, *imul*, *idiv*, *imod* [dst] [left] [right] - signed integer arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
 Division by zero terminates the program.
 
-*addf*, *subf*, *mulf*, *divf*, *powf* [dst] [left] [right] - floating point arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
-Overflows and other irregularities are silently ignored.
+*iinc*, *idec* [dst] - signed integer arithmetic operations, update value in [dst] in place.
 
-*absf*, *sqrtf*, *sinf*, *cosf*, *tanf* [dst] [src] - floating point arithmetic operations, reads its parameter from [src] and stores the result in [dst].
-Overflows and other irregularities are silently ignored.
+*iabs* [dst] [src] - signed integer arithmetic operations, reads its parameter from [src] and stores the result in [dst].
 
-*si2f*, *ui2f* [dst] [src] - converts signed or unsigned integer to floating point number.
-Rounding may silently happen.
+*fadd*, *fsub*, *fmul*, *fdiv*, *fpow* [dst] [left] [right] - floating point arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
 
-*f2si*, *f2ui* [dst] [src] - converts floating point number to signed or unsigned integer.
-All sorts of fanciness may happen, including program termination.
+*fabs*, *fsqrt*, *fsin*, *fcos*, *ftan* [dst] [src] - floating point arithmetic operations, reads its parameter from [src] and stores the result in [dst].
+
+*s2f*, *u2f* [dst] [src] - converts signed or unsigned integer to floating point number.
+
+*f2s*, *f2u* [dst] [src] - converts floating point number to signed or unsigned integer.
 
 ## Logic instructions
 
@@ -142,37 +157,178 @@ All logic instructions operate on unsigned integers.
 
 *not* [dst] [src] - reads its parameter from [src], converts the parameter to boolean before applying the operation, and stores the result in [dst].
 
-*andb*, *orb*, *xorb* [dst] [left] [right] - reads its parameters from [left] and [right], applies the logic operation to all bits individually, and stores the result in [dst].
+*inv* [dst] - value in [dst] is converted to boolean and inverted in place.
 
-*notb* [dst] [src] - reads its parameter from [src], applies the logic operation to all bits individually, and stores the result in [dst].
+*shl*, *shr*, *rol*, *ror* [dst] [left] [right] - reads its parameters from [left] and [right], performs left/right shift/rotation, and stores the result in [dst].
+
+*band*, *bor*, *bxor* [dst] [left] [right] - reads its parameters from [left] and [right], applies the logic operation to all bits individually, and stores the result in [dst].
+
+*bnot* [dst] [src] - reads its parameter from [src], applies the logic operation to all bits individually, and stores the result in [dst].
+
+*binv* [dst] - all bits in [dst] are inverted in place.
 
 ## Conditions
 
-*eq*, *neq*, *lt*, *gt*, *lte*, *gte* [dst] [left] [right] - reads its parameters from [left] and [right], applies signed integer comparison, and stores the result in [dst].
+*eq*, *neq*, *lt*, *gt*, *lte*, *gte* [dst] [left] [right] - reads its parameters from [left] and [right], applies unsigned integer comparison, and stores the result in [dst].
 
-*equ*, *nequ*, *ltu*, *gtu*, *lteu*, *gteu* [dst] [left] [right] - reads its parameters from [left] and [right], applies unsigned integer comparison, and stores the result in [dst].
+*ieq*, *ineq*, *ilt*, *igt*, *ilte*, *igte* [dst] [left] [right] - reads its parameters from [left] and [right], applies signed integer comparison, and stores the result in [dst].
 
-*eqf*, *neqf*, *ltf*, *gtf*, *ltef*, *gtef* [dst] [left] [right] - reads its parameters from [left] and [right], applies floating point comparison, and stores the result in [dst].
+*feq*, *fneq*, *flt*, *fgt*, *flte*, *fgte* [dst] [left] [right] - reads its parameters from [left] and [right], applies floating point comparison, and stores the result in [dst].
 
-*isnan*, *isinf*, *isfin* [dst] [src] - reads its parameter from [src], and stores the result in [dst].
+*fisnan*, *fisinf*, *fisfin* [dst] [src] - reads its parameter from [src], and stores the result in [dst].
 
-*test* [dst] [src] - reads its parameter from [src], converts it to boolean, and stores the result in [dst].
+*test* [dst] [src] - reads its parameter from [src], does integer comparison, and stores the result in [dst].
+If the value is zero, the result is 0, otherwise 1.
 
 ## Memory access
 
-## Flow control
+*load* [dst] [src] - reads value from [src], which may be top cell of a stack, _front_ cell of a queue, cell at current position on a tape or a cell in a memory pool, and stores in into a *register* [dst].
+This instruction terminates the program if the cell does not exists.
+This instruction does NOT remove elements from the structures.
 
-### Labels
+*indload* [dst] [src] - read `i`-th cell from *memory pool* [src] and store it in [dst].
+This instruction terminates the program if the cell does not exists.
 
-### Jumps
+*indindload* [src] - read `i`-th cell from `j`-th memory pool and store it in [dst].
+This instruction terminates the program if the cell does not exists.
 
-### Functions
+*store* [dst] [src] - reads value from *register* [src] and stores it in the top cell of a stack, _front_ cell of a queue, cell at current position on a tape or a cell in memory pool.
+This instruction terminates the program if the cell does not exists or is read only.
+This instruction does NOT add new elements to the structures.
+
+*indstore* [dst] [src] - write value from [src] into `i`-th cell in *memory pool* [dst].
+This instruction terminates the program if the cell does not exists or is read only.
+
+*indindstore* [src] - write value from [src] into `i`-th cell in `j`-th memory pool.
+This instruction terminates the program if the cell does not exists or is read only.
+
+*pop* [dst] [src] - reads value from top cell of *stack* [src], stores it in *register* [dst], and removes the element from the stack.
+This instruction terminates the program if the stack is disabled or empty.
+
+*push* [dst] [src] - creates new element on top of the *stack* [dst], and stores the value from *register* [src] into it.
+This instruction terminates the program if the stack is disabled or full.
+
+*dequeue* [dst] [src] - reads value from front cell of *queue* [src], stores it in *register* [dst], and removes the element from the queue.
+This instruction terminates the program if the queue is disabled or empty.
+
+*enqueue* [dst] [src] - creates new element on back of the *queue* [dst], and stores the value from *register* [src] into it.
+This instruction terminates the program if the queue is disabled or full.
+
+*left*, *right* [dst] [src] - moves the pointer on *tape* [dst] to left/right by the value [src].
+This instruction terminates the program if the tape is disabled or the move would surpass its capacity.
+
+*center* [dst] - centers the pointer on *tape* [dst] to the initial element (position zero).
+This instruction terminates the program if the tape is disabled.
+
+*stat* [src] - retrieves instructions about the structure [src].
+Set register `e` whether the structure is enabled.
+Set register `a` whether any elements in the structure are available (non-empty).
+Set register `f` whether the structure is full.
+Set register `w` whether the structure is writable (not read only).
+Set register `c` to the capacity of the structure.
+Set register `s` to current size of the structure.
+Set register `p` to current position on a tape.
+Set register `l` to leftmost index of a valid element on a tape.
+Set register `r` to rightmost index of a valid element on a tape.
+
+## Jumps
+
+*label* [name] - defines point in code which other instructions can jump to by name.
+The name must start with `A` through `Z`, may contain `a` through `z`, `A` through `Z`, and `0` through `9` only, and must be at least 3 and at most 10 characters long.
+Labels are scoped within their function, and must be unique in their scope.
+
+*jump* [label] - unconditionally jumps to [label].
+
+*condjmp* [label] - if value in `z` evaluates true, jump to [label], otherwise do nothing.
+
+*if* [src] [label] - if value in *register* [src] evaluates true, jump to [label], otherwise do nothing.
+
+*skip* [literal] - if value in `z` evaluates true, skip *unsigned integer* [literal] count of *instructions*, otherwise do nothing.
+If the count leads outside the scope of current function, the program is ill formed.
+
+No jumps may cross function boundaries.
+
+## Functions
+
+*function* [name] - defines starting point of a function, which can be called into by name.
+The name must start with `A` through `Z`, may contain `a` through `z`, `A` through `Z`, and `0` through `9` only, and must be at least 3 and at most 10 characters long.
+Function names must be unique.
+This instruction ends the scope of previous function and starts scope of this function.
+
+*call* [function] - pushes next instruction pointer onto call stack and jumps to first instruction in the function [function].
+
+*condcall* [function] - if value in `z` evaluates true, push next instruction pointer onto call stack and jump to first instruction in the function [function], otherwise do nothing.
+
+*return* - retrieves instruction pointer from call stack and jumps to it.
+
+*condreturn* - if value in `z` evaluates true, retrieve instruction pointer from call stack and jump to it, otherwise do nothing.
+
+Function calls do not store any other registers in the stack - the function itself is responsible for not corrupting the state of the calling function.
+The convention is that private registers may be freely overridden by a function call whereas public registers should always be preserved.
+It is best to use public registers for passing arguments and returning values.
 
 ## Input and output
 
-### Numeric
+Input and output streams are cached line by line.
+Following instructions can manipulate input and output line buffers.
 
-### Strings
+*rstat*, *wstat* - retrieves information about current line in input or output stream.
+Set register `u` whether reading/writing unsigned integer is possible.
+Set register `i` whether reading/writing signed integer is possible.
+Set register `f` whether reading/writing floating point number is possible.
+Set register `c` whether reading/writing character is possible.
+Set register `s` to current size of the buffer.
+Set register `p` to current position in the buffer.
+
+*read* [dst] - read unsigned integer from input buffer and store it in [dst].
+
+*iread* [dst] - read signed integer from input buffer and store it in [dst].
+
+*fread* [dst] - read floating point number from input buffer and store it in [dst].
+
+*cread* [dst] - read single character from input buffer and store it in [dst].
+The character read is ASCII encoded.
+
+*readln* - clear input buffer and fill it with new line from standard input.
+The buffer is filtered with allowed characters only.
+Set register `f` whether any filtering has happened.
+Set register `z` whether the line was successfully read from the input.
+
+*rclear* - clear input buffer.
+
+*write* [src] - write unsigned integer from [src] into output buffer.
+
+*iwrite* [src] - write signed integer from [src] into output buffer.
+
+*fwrite* [src] - write floating point number from [src] into output buffer.
+
+*cwrite* [src] - write single character from [src] into output buffer.
+The character written is ASCII encoded and must correspond to one of allowed characters.
+If the character is not allowed, the program is terminated.
+
+*writeln* - append line feed to output buffer and flush it to standard output.
+Set register `z` whether the line was successfully written to the output.
+
+*wclear* - clear output buffer.
+
+*rwswap* - swap current input and output buffers.
+
+## Miscelaneous
+
+*timer* [seconds] [microseconds] - retrieves time elapsed since start of the program run.
+The time is split into seconds and microseconds stored separately as unsigned integers.
+
+*rdseedany* - initializes random number generator with random seed.
+
+*rdseed* [A] [B] [C] [D] - initializes random number generator with four unsigned integers taken from [A], [B], [C], and [D].
+
+*rand* [dst] - read random unsigned integer and store it in [dst].
+
+*irand* [dst] - read random signed integer and store it in [dst].
+
+*frand* [dst] - read random floating point number and store it in [dst].
+
+*terminate* - explicitly request program termination.
 
 # Profiling And Tracing
 
@@ -181,7 +337,7 @@ This may be useful to debug misbehaving program or to optimize slow algorithms.
 
 Profiling runs the program as usual and, when finished, generates separate log file with copy of the input program and with added number of executions of each instruction.
 
-> _Note:_ When multiple instructions are on same lane (eg. separated by `;` or due to macro expansion), they all contribute to shared counter on that line.
+> _Note:_ When multiple instructions are on same line (eg. separated by `;`), they all contribute to shared counter on that line.
 
 Tracing is split into few categories, each can be enabled/disabled individually:
 - reading/writing from/to registers
@@ -193,7 +349,7 @@ Tracing is split into few categories, each can be enabled/disabled individually:
 
 Tracing runs the program as usual and simultaneously logs selected actions into separate file.
 
-> _Warning:_ Tracing may slow a program significantly due to extensive file operations and is therefore discouraged unless needed.
+> _Warning:_ Tracing may slow the program significantly due to extensive file operations and is therefore discouraged unless needed.
 
 Both profiling and tracing can additionally be controlled from the program.
 Special instructions can temporarily enable or disable tracing or profiling.
