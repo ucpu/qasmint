@@ -396,6 +396,14 @@ The time is split into seconds and microseconds stored separately as unsigned in
 
 *terminate* - explicitly request program termination.
 
+*profiling* [literal] - disable profiling if the unsigned integer literal is zero and enable it otherwise.
+This instruction is disabled by default.
+Reaching this instruction when disabled does not terminate the program and ignores it.
+
+*tracing* [literal] - disable tracing if the unsigned integer literal is zero and enable it otherwise.
+This instruction is disabled by default.
+Reaching this instruction when disabled does not terminate the program and ignores it.
+
 # Profiling And Tracing
 
 You may configure `qasmint` to trace and/or profile what is the program doing.
@@ -420,6 +428,6 @@ Tracing runs the program as usual and simultaneously logs selected actions into 
 Both profiling and tracing can additionally be controlled from the program.
 Special instructions can temporarily enable or disable tracing or profiling.
 These instructions are disabled by default.
-Reaching these instructions in running program, when disabled, unlike all other instruction, does not cause it to terminate and are simply ignored.
+Reaching these instructions in running program, when disabled, unlike other instruction, does not cause it to terminate and are simply ignored.
 This is useful to narrow the scope in which profiling and/or tracing is effective.
 
