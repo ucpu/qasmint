@@ -17,13 +17,13 @@ Every run of the processor will count number of register and memory accesses and
 
 ## Generate random numbers
 
-This program generates 100 random numbers and prints them to output.
+This program generates 1000 random numbers and prints them to output.
 
 randgen.qasm:
 ```
 function Main
 set I 0
-set T 100
+set T 1000
 label Loop
 rand J
 write J
@@ -39,7 +39,65 @@ This program reads all numbers from input, sorts them, and prints them to output
 
 sort.qasm:
 ```
-# todo
+function Main
+
+# read input
+set C 0 # number of elements
+label InputBegin
+readln
+inv z
+condjmp SortBegin
+label Input
+rstat
+copy z u
+inv z
+condjmp SortBegin
+read V
+store TA V
+right TA
+inc C
+jump InputBegin
+
+# begin sorting
+label SortBegin
+set M 0 # has anything been modified?
+center TA
+right TA
+label Sorting
+stat TA
+gte z p C
+condjmp Ending
+left TA
+load L TA
+right TA
+load R TA
+lte z L R
+skip 5
+store TA R
+left TA
+store TA L
+right TA
+set M 1
+right TA
+jump Sorting
+label Ending
+copy z M
+condjmp SortBegin
+
+# write output
+center TA
+set Z 0
+label Output
+gt z C Z
+condjmp Done
+load V TA
+write V
+writeln
+right TA
+dec C
+jump Output
+
+label Done
 ```
 
 ## Running the programs
@@ -90,7 +148,7 @@ Each line is limited to about 100 characters.
 The program may consist of restricted set of characters:
 - alphabet: `A` through `Z` and `a` through `z` - the case is important in all places
 - digits: `0` through `9`
-- special characters: ` `, `-`, `+`, `.`, `_`, `@`, `;`, `#`
+- special characters: ` ` (space), `-`, `+`, `.`, `_`, `@`, `;`, `#`
 - characters allowed inside comments only: `*`, `/`, `,`, `(`, `)`, `<`, `>`, `?`, `!`, `:`
 
 If line contains `#`, that character and the rest of the line is not interpreted and can be used to convey the meaning of the program.
@@ -180,7 +238,7 @@ All logic instructions operate on unsigned integers.
 *test* [dst] [src] - reads its parameter from [src], does integer comparison, and stores the result in [dst].
 If the value is zero, the result is 0, otherwise 1.
 
-## Memory access
+## Memory structures
 
 *load* [dst] [src] - reads value from [src], which may be top cell of a stack, _front_ cell of a queue, cell at current position on a tape or a cell in a memory pool, and stores in into a *register* [dst].
 This instruction terminates the program if the cell does not exists.
@@ -214,11 +272,21 @@ This instruction terminates the program if the queue is disabled or empty.
 *enqueue* [dst] [src] - creates new element on back of the *queue* [dst], and stores the value from *register* [src] into it.
 This instruction terminates the program if the queue is disabled or full.
 
-*left*, *right* [dst] [src] - moves the pointer on *tape* [dst] to left/right by the value [src].
+*left*, *right* [dst] - moves the pointer on *tape* [dst] to left/right by 1 element.
+This instruction terminates the program if the tape is disabled or the move would surpass its capacity.
+
+*indleft*, *indright* [dst] - moves the pointer on *tape* [dst] to left/right by unsigned integer `i` elements.
 This instruction terminates the program if the tape is disabled or the move would surpass its capacity.
 
 *center* [dst] - centers the pointer on *tape* [dst] to the initial element (position zero).
 This instruction terminates the program if the tape is disabled.
+
+*sswap* [left] [right] - swap structures [left] and [right].
+The structures must be of same type, otherwise the program is ill formed.
+
+*indsswap* [left] [right] - swap `i`-th instance of structure [left] and `j`-th instance of structure [right].
+The structures must be of same type, otherwise the program is ill formed.
+This instruction terminates the program if either of the structures do not exists.
 
 *stat* [src] - retrieves instructions about the structure [src].
 Set register `e` whether the structure is enabled.
@@ -234,14 +302,12 @@ Set register `r` to rightmost index of a valid element on a tape.
 ## Jumps
 
 *label* [name] - defines point in code which other instructions can jump to by name.
-The name must start with `A` through `Z`, may contain `a` through `z`, `A` through `Z`, and `0` through `9` only, and must be at least 3 and at most 10 characters long.
+The name must start with `A` through `Z`, may contain `a` through `z`, `A` through `Z`, and `0` through `9` only, and must be at least 3 and at most 20 characters long.
 Labels are scoped within their function, and must be unique in their scope.
 
 *jump* [label] - unconditionally jumps to [label].
 
 *condjmp* [label] - if value in `z` evaluates true, jump to [label], otherwise do nothing.
-
-*if* [src] [label] - if value in *register* [src] evaluates true, jump to [label], otherwise do nothing.
 
 *skip* [literal] - if value in `z` evaluates true, skip *unsigned integer* [literal] count of *instructions*, otherwise do nothing.
 If the count leads outside the scope of current function, the program is ill formed.
@@ -251,7 +317,7 @@ No jumps may cross function boundaries.
 ## Functions
 
 *function* [name] - defines starting point of a function, which can be called into by name.
-The name must start with `A` through `Z`, may contain `a` through `z`, `A` through `Z`, and `0` through `9` only, and must be at least 3 and at most 10 characters long.
+The name must start with `A` through `Z`, may contain `a` through `z`, `A` through `Z`, and `0` through `9` only, and must be at least 3 and at most 20 characters long.
 Function names must be unique.
 This instruction ends the scope of previous function and starts scope of this function.
 
@@ -315,12 +381,12 @@ Set register `z` whether the line was successfully written to the output.
 
 ## Miscelaneous
 
-*timer* [seconds] [microseconds] - retrieves time elapsed since start of the program run.
+*timer* [s] [m] - retrieves time elapsed since start of the program run and stores it in the [s] and [m].
 The time is split into seconds and microseconds stored separately as unsigned integers.
 
 *rdseedany* - initializes random number generator with random seed.
 
-*rdseed* [A] [B] [C] [D] - initializes random number generator with four unsigned integers taken from [A], [B], [C], and [D].
+*rdseed* [a] [b] [c] [d] - initializes random number generator with four unsigned integers taken from [a], [b], [c], and [d].
 
 *rand* [dst] - read random unsigned integer and store it in [dst].
 
