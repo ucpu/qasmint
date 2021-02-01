@@ -43,7 +43,7 @@ Example running the aforementioned programs, chained together:
 
 The qASM processor has 26 private registers (denoted as `a` through `z`), which generally have special meaning for many instructions, and 26 public registers (`A` through `Z`) which are freely available for use by programs.
 Number or range of registers cannot be limited.
-Each register holds one 32bit signed integer or 32bit floating point number - its interpretation depends on the instruction using it.
+Each register holds one 32bit signed or unsigned integer or 32bit floating point number - its interpretation depends on the instruction using it.
 
 The processor also has up to 26 stacks (`SA` through `SZ`), up to 26 queues (`QA` through `QZ`), up to 26 tapes (`TA` through `TZ`), and up to 26 directly accessible memory pools (`MA` through `MZ`).
 Their number and capacity can be restricted, for each type of structure individually, but same for all instances of that structure (except memory pools).
@@ -108,42 +108,55 @@ In the following sections, [variable] are macro parameters and are expanded acco
 
 ## Arithmetic instructions
 
-*inc*, *dec* [variable] - integer increment and decrement, updates the [variable] by one.
-Overflows are silently ignored.
-
-*add*, *sub*, *mul*, *div* [dst] [left] [right] - integer arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
+*add*, *sub*, *mul*, *div*, *mod* [dst] [left] [right] - signed integer arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
 Overflows are silently ignored.
 Division by zero terminates the program.
 
-*addf*, *subf*, *mulf*, *divf*, *modf*, *powf* [dst] [left] [right] - floating point arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
+*abs* [dst] [src] - signed integer arithmetic operations, reads its parameter from [src] and stores the result in [dst].
+Overflows are silently ignored.
+
+*inc*, *dec* [src] - integer increment and decrement, updates the [src] by one.
+Overflows are silently ignored.
+
+*addu*, *subu*, *mulu*, *divu*, *modu* [dst] [left] [right] - unsigned integer arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
+Overflows are silently ignored.
+Division by zero terminates the program.
+
+*addf*, *subf*, *mulf*, *divf*, *powf* [dst] [left] [right] - floating point arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
 Overflows and other irregularities are silently ignored.
 
-*sqrtf*, *sinf*, *cosf*, *tanf* [dst] [src] - floating point arithmetic operations, reads its parameter from [src] and stores the result in [dst].
+*absf*, *sqrtf*, *sinf*, *cosf*, *tanf* [dst] [src] - floating point arithmetic operations, reads its parameter from [src] and stores the result in [dst].
 Overflows and other irregularities are silently ignored.
 
-*i2f* [dst] [src] - converts integer to floating point number (as with c-style cast).
+*si2f*, *ui2f* [dst] [src] - converts signed or unsigned integer to floating point number.
 Rounding may silently happen.
 
-*f2i* [dst] [src] - converts floating point number to integer (as with c-style cast).
+*f2si*, *f2ui* [dst] [src] - converts floating point number to signed or unsigned integer.
 All sorts of fanciness may happen, including program termination.
 
 ## Logic instructions
 
-*and*, *or*, *xor* [dst] [left] [right] - logic operations, reads its parameters from [left] and [right], converts both parameters to boolean before applying the operation, and stores the result in [dst].
+All logic instructions operate on unsigned integers.
 
-*not* [dst] [src] - logic operation, reads its parameter from [src], converts the parameter to boolean before applying the operation, and stores the result in [dst].
+*and*, *or*, *xor* [dst] [left] [right] - reads its parameters from [left] and [right], converts both parameters to boolean before applying the operation, and stores the result in [dst].
 
-*andb*, *orb*, *xorb* [dst] [left] [right] - logic operations, reads its parameters from [left] and [right], applies the logic operation to all bits individually, and stores the result in [dst].
+*not* [dst] [src] - reads its parameter from [src], converts the parameter to boolean before applying the operation, and stores the result in [dst].
 
-*notb* [dst] [src] - logic operation, reads its parameter from [src], applies the logic operation to all bits individually, and stores the result in [dst].
+*andb*, *orb*, *xorb* [dst] [left] [right] - reads its parameters from [left] and [right], applies the logic operation to all bits individually, and stores the result in [dst].
+
+*notb* [dst] [src] - reads its parameter from [src], applies the logic operation to all bits individually, and stores the result in [dst].
 
 ## Conditions
 
-*eq*, *neq*, *lt*, *gt*, *lte*, *gte* [dst] [left] [right] - condition - reads its parameters from [left] and [right], applies integer comparison, and stores the result in [dst].
+*eq*, *neq*, *lt*, *gt*, *lte*, *gte* [dst] [left] [right] - reads its parameters from [left] and [right], applies signed integer comparison, and stores the result in [dst].
 
-*eqf*, *neqf*, *ltf*, *gtf*, *ltef*, *gtef* [dst] [left] [right] - condition - reads its parameters from [left] and [right], applies floating point comparison, and stores the result in [dst].
+*equ*, *nequ*, *ltu*, *gtu*, *lteu*, *gteu* [dst] [left] [right] - reads its parameters from [left] and [right], applies unsigned integer comparison, and stores the result in [dst].
 
-*test* [dst] [src] - condition - reads its parameter from [src], converts it to boolean, and stores the result in [dst].
+*eqf*, *neqf*, *ltf*, *gtf*, *ltef*, *gtef* [dst] [left] [right] - reads its parameters from [left] and [right], applies floating point comparison, and stores the result in [dst].
+
+*isnan*, *isinf*, *isfin* [dst] [src] - reads its parameter from [src], and stores the result in [dst].
+
+*test* [dst] [src] - reads its parameter from [src], converts it to boolean, and stores the result in [dst].
 
 ## Memory access
 
