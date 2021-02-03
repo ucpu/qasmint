@@ -22,15 +22,15 @@ This program generates 1000 random numbers and prints them to output.
 randgen.qasm:
 ```
 function Main
-set I 0
-set T 1000
+set I 0       # count of generated numbers
+set T 1000    # count of numbers to generate
 label Loop
-rand J
-write J
-writeln
-inc I
+rand J        # generate random number and store it in register J
+write J       # write the number from register J to output buffer
+writeln       # flush the output buffer to standard output
+inc I         # increment the counter of generated numbers
 lt z I T
-condjmp Loop
+condjmp Loop  # go generate another number if we are below the limit
 ```
 
 ## Sort numbers
@@ -42,60 +42,68 @@ sort.qasm:
 function Main
 
 # read input
-set C 0 # number of elements
+set C 0             # number of elements
 label InputBegin
-readln
-inv z
-condjmp SortBegin
+readln              # read one line from standard input into input buffer
+inv z               # invert the flag whether we succeeded reading a line
+condjmp SortBegin   # start sorting if there are no more numbers to read
 label Input
-rstat
-copy z u
-inv z
-condjmp SortBegin
-read V
-store TA V
-right TA
-inc C
-jump InputBegin
+rstat               # check what is in the input buffer
+copy z u            # is it unsigned integer?
+inv z               # is it NOT unsigned integer?
+condjmp InvalidInput # handle invalid input
+read V              # read the number into register V
+store TA V          # store the number from the register V onto the current position on tape A
+right TA            # move the position (the read/write head) on tape A one element to the right
+inc C               # increment the counter of numbers
+jump InputBegin     # go try read another number
+label InvalidInput
+terminate           # nothing useful to do with invalid input
 
-# begin sorting
+# start a sorting pass over all elements
+# this is the outer loop in bubble sort
 label SortBegin
-set M 0 # has anything been modified?
-center TA
-right TA
+set M 0             # flag if anything has been modified?
+center TA           # move the head on tape A to the initial position
+right TA            # and one element to the right
+
+# compare two elements and swap them if needed
+# this is the inner loop in bubble sort
 label Sorting
-stat TA
-gte z p C
-condjmp Ending
-left TA
-load L TA
-right TA
-load R TA
-lte z L R
-skip 5
-store TA R
-left TA
-store TA L
-right TA
-set M 1
-right TA
-jump Sorting
+stat TA             # retrieve information about the tape A
+gte z p C           # compare head position on tape A with value in register C and store it in register z
+condjmp Ending      # jump to Ending if z evaluates true
+left TA             # move the head one left
+load L TA           # load value from tape A to register L
+right TA            # move the head back
+load R TA           # load value to register R
+lte z L R           # compare values in registers L and R and store the result in register Z
+condskip 5          # skip 5 instructions if z is true
+store TA R          # store value from register R onto the tape
+left TA             # move head one left again
+store TA L          # store value from L
+right TA            # and move the head back again
+set M 1             # mark that we made a change
+right TA            # move head one right - this is the first instruction to execute after the skip
+jump Sorting        # go try sort next pair of elements
+
+# finished a pass over all elements
 label Ending
-copy z M
-condjmp SortBegin
+copy z M            # copy value from register M to register z
+condjmp SortBegin   # go start another sorting pass if we made any modifications
 
 # write output
-center TA
-set Z 0
+center TA           # move the head on tape A to the initial position
+set Z 0             # count of outputted numbers
 label Output
-gt z C Z
-condjmp Done
-load V TA
-write V
-writeln
-right TA
-dec C
-jump Output
+gt z C Z            # do we have more numbers to output?
+condjmp Done        # no, we do not
+load V TA           # load number from the tape A into register V
+write V             # write value from register V into output buffer
+writeln             # flush the output buffer to standard output
+right TA            # move the head on tape A one element to the right
+dec C               # decrement count of numbers to output
+jump Output         # go try output another number
 
 label Done
 ```
@@ -108,7 +116,7 @@ Example running the aforementioned programs, chained together:
 
 # Processor
 
-The qASM processor has 26 private registers (denoted as `a` through `z`), which generally have special meaning for many instructions, and 26 public registers (`A` through `Z`) which are freely available for use by programs.
+The qASM processor has 26 implicit registers (denoted as `a` through `z`), which generally have special meaning for many instructions, and 26 explicit registers (`A` through `Z`) which are freely available for use by programs.
 Number or range of registers cannot be limited.
 Each register holds one 32bit signed or unsigned integer or 32bit floating point number - its interpretation depends on the instruction using it.
 
@@ -130,14 +138,14 @@ The default limit is 1000 nested calls.
 ## Initialization
 
 When starting a program:
-- all public registers are initialized to zero, unless specified otherwise
-- *initial values of private registers are unspecified*
+- all explicit registers are initialized to zero, unless specified otherwise
+- *initial values of implicit registers are unspecified*
 - all stacks and queues are empty
 - all tapes, if enabled, have one element, the value of the element is zero, and the pointer is set to point to the element (position zero)
 - all elements in all memory pools are initialized with zeroes, unless specified otherwise
 - the call stack is initialized with a call to _Main_ function
 
-A program may also be started with some public registers and some memory pools already populated with data, for example with decoded image pixels.
+A program may also be started with some explicit registers and some memory pools already populated with data, for example with decoded image pixels.
 
 # Assembler
 
@@ -146,39 +154,49 @@ Each line is limited to about 100 characters.
 (Line ends are automatically converted.)
 
 The program may consist of restricted set of characters:
-- alphabet: `A` through `Z` and `a` through `z` - the case is important in all places
+- alphabet: `A` through `Z` and `a` through `z` - the case is important
 - digits: `0` through `9`
-- special characters: ` ` (space), `-`, `+`, `.`, `_`, `@`, `;`, `#`
-- characters allowed inside comments only: `*`, `/`, `,`, `(`, `)`, `<`, `>`, `?`, `!`, `:`
+- special characters: space, `-`, `+`, `.`, `_`, `@`, `#`
+- characters allowed inside comments only: `*`, `/`, `,`, `(`, `)`, `<`, `>`, `?`, `!`, `:`, `;`
 
 If line contains `#`, that character and the rest of the line is not interpreted and can be used to convey the meaning of the program.
 Comments are subject to the restricted set of characters too.
 There are no multi-line comments.
 
-Multiple instructions can be on one line, separated by `;`.
-Last instruction on a line may NOT end with `;`.
+Empty lines are ignored.
+
+## Placeholders
+
+Instructions descriptions in the following chapters use [brackets] to denote placeholders, which should be replaced by actual values in the programs.
+
+Placeholders can be replaced by a name of a register (eg. `z` or `K`).
+Some instructions allow use of a structure (eg. `SS` or `QB`).
+Additionally, memory pools may, also have address specified (eg. `MC@42` - which denotes 42nd element of the C memory pool).
+
+> _Note:_ Some instructions can be used with some structures or registers only.
+This is usually indicated further in the description by highlighting the type.
 
 ## Register instructions
 
-*reset* [dst] - set *register* [dst] to zero.
+*reset* [dst] - set register [dst] to zero.
 
-*set* [dst] [literal] - set *register* [dst] to the unsigned integer [literal].
+*set* [dst] [literal] - set register [dst] to the unsigned integer [literal].
 
-*iset* [dst] [literal] - set *register* [dst] to the signed integer [literal].
+*iset* [dst] [literal] - set register [dst] to the signed integer [literal].
 
-*fset* [dst] [literal] - set *register* [dst] to the floating point number [literal].
+*fset* [dst] [literal] - set register [dst] to the floating point number [literal].
 
-*copy* [dst] [src] - copy value from *register* [src] into *register* [dst].
+*copy* [dst] [src] - copy value from register [src] into register [dst].
 
-*condrst* [dst] - if value in `z` evaluates true, set *register* [dst] to zero, otherwise do nothing.
+*condrst* [dst] - if value in `z` evaluates true, set register [dst] to zero, otherwise do nothing.
 
-*condset* [dst] [literal] - if value in `z` evaluates true, set *register* [dst] to the unsigned integer [literal], otherwise do nothing.
+*condset* [dst] [literal] - if value in `z` evaluates true, set register [dst] to the unsigned integer [literal], otherwise do nothing.
 
-*condiset* [dst] [literal] - if value in `z` evaluates true, set *register* [dst] to the signed integer [literal], otherwise do nothing.
+*condiset* [dst] [literal] - if value in `z` evaluates true, set register [dst] to the signed integer [literal], otherwise do nothing.
 
-*condfset* [dst] [literal] - if value in `z` evaluates true, set *register* [dst] to the floating point number [literal], otherwise do nothing.
+*condfset* [dst] [literal] - if value in `z` evaluates true, set register [dst] to the floating point number [literal], otherwise do nothing.
 
-*condcpy* [dst] [src] - if value in `z` evaluates true, copy value from *register* [src] into *register* [dst], otherwise do nothing.
+*condcpy* [dst] [src] - if value in `z` evaluates true, copy value from register [src] into register [dst], otherwise do nothing.
 
 *indcpy* - copy value from register whose index is read from `s`, into register whose index is read from `d`.
 This instruction terminates the program if either of the indices is invalid.
@@ -240,7 +258,7 @@ If the value is zero, the result is 0, otherwise 1.
 
 ## Memory structures
 
-*load* [dst] [src] - reads value from [src], which may be top cell of a stack, _front_ cell of a queue, cell at current position on a tape or a cell in a memory pool, and stores in into a *register* [dst].
+*load* [dst] [src] - reads value from [src], which may be top cell of a stack, _front_ cell of a queue, cell at current position on a tape or a cell in a memory pool, and stores it into register [dst].
 This instruction terminates the program if the cell does not exists.
 This instruction does NOT remove elements from the structures.
 
@@ -250,7 +268,7 @@ This instruction terminates the program if the cell does not exists.
 *indindload* [src] - read `i`-th cell from `j`-th memory pool and store it in [dst].
 This instruction terminates the program if the cell does not exists.
 
-*store* [dst] [src] - reads value from *register* [src] and stores it in the top cell of a stack, _front_ cell of a queue, cell at current position on a tape or a cell in memory pool.
+*store* [dst] [src] - reads value from register [src] and stores it in the top cell of a stack, _front_ cell of a queue, cell at current position on a tape or a cell in memory pool.
 This instruction terminates the program if the cell does not exists or is read only.
 This instruction does NOT add new elements to the structures.
 
@@ -260,16 +278,16 @@ This instruction terminates the program if the cell does not exists or is read o
 *indindstore* [src] - write value from [src] into `i`-th cell in `j`-th memory pool.
 This instruction terminates the program if the cell does not exists or is read only.
 
-*pop* [dst] [src] - reads value from top cell of *stack* [src], stores it in *register* [dst], and removes the element from the stack.
+*pop* [dst] [src] - reads value from top cell of *stack* [src], stores it in register [dst], and removes the element from the stack.
 This instruction terminates the program if the stack is disabled or empty.
 
-*push* [dst] [src] - creates new element on top of the *stack* [dst], and stores the value from *register* [src] into it.
+*push* [dst] [src] - creates new element on top of the *stack* [dst], and stores the value from register [src] into it.
 This instruction terminates the program if the stack is disabled or full.
 
-*dequeue* [dst] [src] - reads value from front cell of *queue* [src], stores it in *register* [dst], and removes the element from the queue.
+*dequeue* [dst] [src] - reads value from front cell of *queue* [src], stores it in register [dst], and removes the element from the queue.
 This instruction terminates the program if the queue is disabled or empty.
 
-*enqueue* [dst] [src] - creates new element on back of the *queue* [dst], and stores the value from *register* [src] into it.
+*enqueue* [dst] [src] - creates new element on back of the *queue* [dst], and stores the value from register [src] into it.
 This instruction terminates the program if the queue is disabled or full.
 
 *left*, *right* [dst] - moves the pointer on *tape* [dst] to left/right by 1 element.
@@ -309,7 +327,7 @@ Labels are scoped within their function, and must be unique in their scope.
 
 *condjmp* [label] - if value in `z` evaluates true, jump to [label], otherwise do nothing.
 
-*skip* [literal] - if value in `z` evaluates true, skip *unsigned integer* [literal] count of *instructions*, otherwise do nothing.
+*condskip* [literal] - if value in `z` evaluates true, skip *unsigned integer* [literal] count of *instructions*, otherwise do nothing.
 If the count leads outside the scope of current function, the program is ill formed.
 
 No jumps may cross function boundaries.
@@ -325,13 +343,13 @@ This instruction ends the scope of previous function and starts scope of this fu
 
 *condcall* [function] - if value in `z` evaluates true, push next instruction pointer onto call stack and jump to first instruction in the function [function], otherwise do nothing.
 
-*return* - retrieves instruction pointer from call stack and jumps to it.
+*return* - pops instruction pointer from call stack and jumps to it.
 
-*condreturn* - if value in `z` evaluates true, retrieve instruction pointer from call stack and jump to it, otherwise do nothing.
+*condreturn* - if value in `z` evaluates true, pop instruction pointer from call stack and jump to it, otherwise do nothing.
 
 Function calls do not store any other registers in the stack - the function itself is responsible for not corrupting the state of the calling function.
-The convention is that private registers may be freely overridden by a function call whereas public registers should always be preserved.
-It is best to use public registers for passing arguments and returning values.
+The convention is that implicit registers may be freely changed whereas explicit registers should always be restored to original values before returning from function.
+It is best to use explicit registers for passing arguments and returning values.
 
 ## Input and output
 
@@ -342,38 +360,50 @@ Following instructions can manipulate input and output line buffers.
 Set register `u` whether reading/writing unsigned integer is possible.
 Set register `i` whether reading/writing signed integer is possible.
 Set register `f` whether reading/writing floating point number is possible.
-Set register `c` whether reading/writing character is possible.
+Set register `c` whether reading/writing a character is possible.
 Set register `s` to current size of the buffer.
 Set register `p` to current position in the buffer.
 
 *read* [dst] - read unsigned integer from input buffer and store it in [dst].
+This instruction terminates the program if input is invalid.
 
 *iread* [dst] - read signed integer from input buffer and store it in [dst].
+This instruction terminates the program if input is invalid.
 
 *fread* [dst] - read floating point number from input buffer and store it in [dst].
+This instruction terminates the program if input is invalid.
 
 *cread* [dst] - read single character from input buffer and store it in [dst].
 The character read is ASCII encoded.
+This instruction terminates the program if input is invalid.
 
 *readln* - clear input buffer and fill it with new line from standard input.
 The buffer is filtered with allowed characters only.
 Set register `f` whether any filtering has happened.
 Set register `z` whether the line was successfully read from the input.
 
+*rreset* - reset position in input buffer back to beginning.
+
 *rclear* - clear input buffer.
 
 *write* [src] - write unsigned integer from [src] into output buffer.
+This instruction terminates the program if the buffer is full.
 
 *iwrite* [src] - write signed integer from [src] into output buffer.
+This instruction terminates the program if the buffer is full.
 
 *fwrite* [src] - write floating point number from [src] into output buffer.
+This instruction terminates the program if the buffer is full.
 
 *cwrite* [src] - write single character from [src] into output buffer.
 The character written is ASCII encoded and must correspond to one of allowed characters.
-If the character is not allowed, the program is terminated.
+The program is terminated if the character is not allowed.
+This instruction terminates the program if the buffer is full.
 
 *writeln* - append line feed to output buffer and flush it to standard output.
 Set register `z` whether the line was successfully written to the output.
+
+*wreset* - reset position in output buffer back to beginning.
 
 *wclear* - clear output buffer.
 
@@ -388,19 +418,19 @@ The time is split into seconds and microseconds stored separately as unsigned in
 
 *rdseed* [a] [b] [c] [d] - initializes random number generator with four unsigned integers taken from [a], [b], [c], and [d].
 
-*rand* [dst] - read random unsigned integer and store it in [dst].
+*rand* [dst] - generate random unsigned integer and store it in [dst].
 
-*irand* [dst] - read random signed integer and store it in [dst].
+*irand* [dst] - generate random signed integer and store it in [dst].
 
-*frand* [dst] - read random floating point number and store it in [dst].
+*frand* [dst] - generate random floating point number and store it in [dst].
 
 *terminate* - explicitly request program termination.
 
-*profiling* [literal] - disable profiling if the unsigned integer literal is zero and enable it otherwise.
+*profiling* [literal] - disable profiling if the unsigned integer [literal] is zero and enable it otherwise.
 This instruction is disabled by default.
 Reaching this instruction when disabled does not terminate the program and ignores it.
 
-*tracing* [literal] - disable tracing if the unsigned integer literal is zero and enable it otherwise.
+*tracing* [literal] - disable tracing if the unsigned integer [literal] is zero and enable it otherwise.
 This instruction is disabled by default.
 Reaching this instruction when disabled does not terminate the program and ignores it.
 
@@ -410,8 +440,6 @@ You may configure `qasmint` to trace and/or profile what is the program doing.
 This may be useful to debug misbehaving program or to optimize slow algorithms.
 
 Profiling runs the program as usual and, when finished, generates separate log file with copy of the input program and with added number of executions of each instruction.
-
-> _Note:_ When multiple instructions are on same line (eg. separated by `;`), they all contribute to shared counter on that line.
 
 Tracing is split into few categories, each can be enabled/disabled individually:
 - reading/writing from/to registers
