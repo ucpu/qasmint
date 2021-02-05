@@ -21,7 +21,6 @@ This program generates 1000 random numbers and prints them to output.
 
 randgen.qasm:
 ```
-function Main
 set I 0       # count of generated numbers
 set T 1000    # count of numbers to generate
 label Loop
@@ -39,8 +38,6 @@ This program reads all numbers from input, sorts them, and prints them to output
 
 sort.qasm:
 ```
-function Main
-
 # read input
 set C 0             # number of elements
 label InputBegin
@@ -143,7 +140,6 @@ When starting a program:
 - all stacks and queues are empty
 - all tapes, if enabled, have one element, the value of the element is zero, and the pointer is set to point to the element (position zero)
 - all elements in all memory pools are initialized with zeroes, unless specified otherwise
-- the call stack is initialized with a call to _Main_ function
 
 A program may also be started with some explicit registers and some memory pools already populated with data, for example with decoded image pixels.
 
@@ -157,7 +153,7 @@ The program may consist of restricted set of characters:
 - alphabet: `A` through `Z` and `a` through `z` - the case is important
 - digits: `0` through `9`
 - special characters: space, `-`, `+`, `.`, `_`, `@`, `#`
-- characters allowed inside comments only: `*`, `/`, `,`, `(`, `)`, `<`, `>`, `?`, `!`, `:`, `;`
+- characters allowed inside comments only: `*`, `/`, `,`, `(`, `)`, `<`, `>`, `=`, `?`, `!`, `:`, `;`
 
 If line contains `#`, that character and the rest of the line is not interpreted and can be used to convey the meaning of the program.
 Comments are subject to the restricted set of characters too.
@@ -217,9 +213,9 @@ Division by zero terminates the program.
 
 *iabs* [dst] [src] - signed integer arithmetic operations, reads its parameter from [src] and stores the result in [dst].
 
-*fadd*, *fsub*, *fmul*, *fdiv*, *fpow* [dst] [left] [right] - floating point arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
+*fadd*, *fsub*, *fmul*, *fdiv*, *fpow*, *fatan2* [dst] [left] [right] - floating point arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
 
-*fabs*, *fsqrt*, *fsin*, *fcos*, *ftan* [dst] [src] - floating point arithmetic operations, reads its parameter from [src] and stores the result in [dst].
+*fabs*, *fsqrt*, *flog*, *fsin*, *fcos*, *ftan*, *fasin*, *facos*, *fatan* [dst] [src] - floating point arithmetic operations, reads its parameter from [src] and stores the result in [dst].
 
 *s2f*, *u2f* [dst] [src] - converts signed or unsigned integer to floating point number.
 
@@ -302,8 +298,7 @@ This instruction terminates the program if the tape is disabled.
 *sswap* [left] [right] - swap structures [left] and [right].
 The structures must be of same type, otherwise the program is ill formed.
 
-*indsswap* [left] [right] - swap `i`-th instance of structure [left] and `j`-th instance of structure [right].
-The structures must be of same type, otherwise the program is ill formed.
+*indsswap* [src] - swap `i`-th instance of structure [src] and `j`-th instance of structure [src].
 This instruction terminates the program if either of the structures do not exists.
 
 *stat* [src] - retrieves instructions about the structure [src].
@@ -350,6 +345,8 @@ This instruction ends the scope of previous function and starts scope of this fu
 Function calls do not store any other registers in the stack - the function itself is responsible for not corrupting the state of the calling function.
 The convention is that implicit registers may be freely changed whereas explicit registers should always be restored to original values before returning from function.
 It is best to use explicit registers for passing arguments and returning values.
+
+Leaving function scope without returning terminates the program.
 
 ## Input and output
 

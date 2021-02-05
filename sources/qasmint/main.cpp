@@ -12,9 +12,9 @@ int main(int argc, const char *args[])
 		log->format.bind<logFormatConsole>();
 		log->output.bind<logOutputStdOut>();
 
-		Holder<QasmCompiler> compiler = newQasmCompiler();
-
-		Holder<QasmCpu> cpu = newQasmCpu();
+		Holder<Compiler> compiler = newCompiler();
+		Holder<BinaryProgram> program = compiler->compile({});
+		Holder<Cpu> cpu = newCpu({});
 
 		// todo
 

@@ -1,6 +1,8 @@
 #include <cage-core/logger.h>
 
-using namespace cage;
+#include "main.h"
+
+uint32 CageTestCase::counter = 0;
 
 void testBasics();
 
@@ -12,6 +14,9 @@ int main()
 
 	testBasics();
 
-	CAGE_LOG(SeverityEnum::Info, "tests", "all tests done ok");
+	{
+		CAGE_TESTCASE("all tests done ok");
+	}
+
 	return 0;
 }
