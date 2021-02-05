@@ -511,6 +511,163 @@ namespace qasm
 				insert(InstructionEnum::binv);
 				params << getRegister(line);
 			}
+			// comparisons
+			else if (instruction == "eq")
+			{
+				insert(InstructionEnum::eq);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "neq")
+			{
+				insert(InstructionEnum::neq);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "lt")
+			{
+				insert(InstructionEnum::lt);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "gt")
+			{
+				insert(InstructionEnum::gt);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "lte")
+			{
+				insert(InstructionEnum::lte);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "gte")
+			{
+				insert(InstructionEnum::gte);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "ieq")
+			{
+				insert(InstructionEnum::ieq);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "ineq")
+			{
+				insert(InstructionEnum::ineq);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "ilt")
+			{
+				insert(InstructionEnum::ilt);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "igt")
+			{
+				insert(InstructionEnum::igt);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "ilte")
+			{
+				insert(InstructionEnum::ilte);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "igte")
+			{
+				insert(InstructionEnum::igte);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "feq")
+			{
+				insert(InstructionEnum::feq);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "fneq")
+			{
+				insert(InstructionEnum::fneq);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "flt")
+			{
+				insert(InstructionEnum::flt);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "fgt")
+			{
+				insert(InstructionEnum::fgt);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "flte")
+			{
+				insert(InstructionEnum::flte);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "fgte")
+			{
+				insert(InstructionEnum::fgte);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "fisnan")
+			{
+				insert(InstructionEnum::fisnan);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "fisinf")
+			{
+				insert(InstructionEnum::fisinf);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "fisfin")
+			{
+				insert(InstructionEnum::fisfin);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "fisnorm")
+			{
+				insert(InstructionEnum::fisnorm);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "test")
+			{
+				insert(InstructionEnum::test);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
 
 			// todo remaining instructions
 		}

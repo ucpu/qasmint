@@ -93,6 +93,7 @@ namespace qasm
 		fisnan,      // R R
 		fisinf,      // R R
 		fisfin,      // R R
+		fisnorm,     // R R
 		test,        // R R
 
 		// stack
@@ -172,9 +173,11 @@ namespace qasm
 		rand,        // R
 		irand,       // R
 		frand,       // R
-		terminate,   //
 		profiling,   // bool
 		tracing,     // bool
+		breakpoint,  //
+		terminate,   //
+		disabled,    //
 		exit,        //
 	};
 

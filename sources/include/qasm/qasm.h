@@ -26,6 +26,7 @@ namespace qasm
 		Initialized,
 		Running,
 		Finished,
+		Interrupted,
 		Terminated,
 	};
 
@@ -35,6 +36,7 @@ namespace qasm
 		void reinitialize();
 		void run();
 		void step();
+		void interrupt(); // can be called from any thread
 		void terminate();
 
 		CpuStateEnum state() const;

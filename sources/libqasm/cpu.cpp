@@ -5,6 +5,7 @@
 #include "program.h"
 
 #include <vector>
+#include <cmath> // isnan etc
 
 namespace qasm
 {
@@ -518,27 +519,143 @@ namespace qasm
 				set(d, ~get(d));
 			} break;
 			case InstructionEnum::eq:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, get(l) == get(r));
+			} break;
 			case InstructionEnum::neq:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, get(l) != get(r));
+			} break;
 			case InstructionEnum::lt:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, get(l) < get(r));
+			} break;
 			case InstructionEnum::gt:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, get(l) > get(r));
+			} break;
 			case InstructionEnum::lte:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, get(l) <= get(r));
+			} break;
 			case InstructionEnum::gte:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, get(l) >= get(r));
+			} break;
 			case InstructionEnum::ieq:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, iget(l) == iget(r));
+			} break;
 			case InstructionEnum::ineq:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, iget(l) != iget(r));
+			} break;
 			case InstructionEnum::ilt:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, iget(l) < iget(r));
+			} break;
 			case InstructionEnum::igt:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, iget(l) > iget(r));
+			} break;
 			case InstructionEnum::ilte:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, iget(l) <= iget(r));
+			} break;
 			case InstructionEnum::igte:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, iget(l) >= iget(r));
+			} break;
 			case InstructionEnum::feq:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, fget(l) == fget(r));
+			} break;
 			case InstructionEnum::fneq:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, fget(l) != fget(r));
+			} break;
 			case InstructionEnum::flt:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, fget(l) < fget(r));
+			} break;
 			case InstructionEnum::fgt:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, fget(l) > fget(r));
+			} break;
 			case InstructionEnum::flte:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, fget(l) <= fget(r));
+			} break;
 			case InstructionEnum::fgte:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, fget(l) >= fget(r));
+			} break;
 			case InstructionEnum::fisnan:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				set(d, std::isnan(fget(s).value));
+			} break;
 			case InstructionEnum::fisinf:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				set(d, std::isinf(fget(s).value));
+			} break;
 			case InstructionEnum::fisfin:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				set(d, std::isfinite(fget(s).value));
+			} break;
+			case InstructionEnum::fisnorm:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				set(d, std::isnormal(fget(s).value));
+			} break;
 			case InstructionEnum::test:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				set(d, !!get(s));
+			} break;
 			case InstructionEnum::sload:
 			case InstructionEnum::sstore:
 			case InstructionEnum::pop:
@@ -601,14 +718,24 @@ namespace qasm
 			case InstructionEnum::rand:
 			case InstructionEnum::irand:
 			case InstructionEnum::frand:
-			case InstructionEnum::terminate:
 			case InstructionEnum::profiling:
 			case InstructionEnum::tracing:
-			default:
-				CAGE_THROW_ERROR(NotImplemented, "invalid or not implemented instruction");
+				CAGE_THROW_ERROR(NotImplemented, "not yet implemented instruction");
+				break;
+			case InstructionEnum::breakpoint:
+				state = CpuStateEnum::Interrupted;
+				break;
+			case InstructionEnum::terminate:
+				CAGE_THROW_ERROR(Exception, "explicit terminate");
+				break;
+			case InstructionEnum::disabled:
+				CAGE_THROW_ERROR(Exception, "disabled instruction");
 				break;
 			case InstructionEnum::exit:
 				state = CpuStateEnum::Finished;
+				break;
+			default:
+				CAGE_THROW_ERROR(Exception, "invalid instruction");
 				break;
 			}
 		}
@@ -641,7 +768,7 @@ namespace qasm
 	void Cpu::run()
 	{
 		CpuImpl *impl = (CpuImpl *)this;
-		CAGE_ASSERT(impl->state == CpuStateEnum::Initialized || impl->state == CpuStateEnum::Running);
+		CAGE_ASSERT(impl->state == CpuStateEnum::Initialized || impl->state == CpuStateEnum::Running || impl->state == CpuStateEnum::Interrupted);
 		impl->state = CpuStateEnum::Running;
 		try
 		{
@@ -658,7 +785,7 @@ namespace qasm
 	void Cpu::step()
 	{
 		CpuImpl *impl = (CpuImpl *)this;
-		CAGE_ASSERT(impl->state == CpuStateEnum::Initialized || impl->state == CpuStateEnum::Running);
+		CAGE_ASSERT(impl->state == CpuStateEnum::Initialized || impl->state == CpuStateEnum::Running || impl->state == CpuStateEnum::Interrupted);
 		impl->state = CpuStateEnum::Running;
 		try
 		{
@@ -669,6 +796,13 @@ namespace qasm
 			impl->state = CpuStateEnum::Terminated;
 			throw;
 		}
+	}
+
+	void Cpu::interrupt()
+	{
+		CpuImpl *impl = (CpuImpl *)this;
+		CAGE_ASSERT(impl->state != CpuStateEnum::None);
+		impl->state = CpuStateEnum::Interrupted;
 	}
 
 	void Cpu::terminate()

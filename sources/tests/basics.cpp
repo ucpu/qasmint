@@ -158,6 +158,72 @@ binv     V # keep the spaces before the register name to test it
 		CAGE_TEST(cpu->state() == CpuStateEnum::None);
 	}
 
+	{
+		CAGE_TESTCASE("comparisons");
+		constexpr const char source[] = R"asm(
+set A 42
+set B 13
+eq  C A B # 0
+neq D A B # 1
+lt  E A B # 0
+gt  F A B # 1
+lte G A B # 0
+gte H A B # 1
+iset A 42
+iset B -13
+ieq  I A B # 0
+ineq J A B # 1
+ilt  K A B # 0
+igt  L A B # 1
+ilte M A B # 0
+igte N A B # 1
+fset A 42.5
+fset B 13.5
+feq  O A B # 0
+fneq P A B # 1
+flt  Q A B # 0
+fgt  R A B # 1
+flte S A B # 0
+fgte T A B # 1
+test U A   # 1
+)asm";
+		Holder<BinaryProgram> program = compiler->compile(source);
+		CAGE_TEST(cpu->state() == CpuStateEnum::None);
+		{
+			CAGE_TESTCASE("run");
+			cpu->program(+program);
+			CAGE_TEST(cpu->state() == CpuStateEnum::Initialized);
+			cpu->run();
+			CAGE_TEST(cpu->state() == CpuStateEnum::Finished);
+		}
+		{
+			CAGE_TESTCASE("verify");
+			const auto rs = cpu->explicitRegisters();
+			CAGE_TEST(rs.size() == 26);
+			CAGE_TEST(rs[2] == 0);
+			CAGE_TEST(rs[3] == 1);
+			CAGE_TEST(rs[4] == 0);
+			CAGE_TEST(rs[5] == 1);
+			CAGE_TEST(rs[6] == 0);
+			CAGE_TEST(rs[7] == 1);
+			CAGE_TEST(rs[8] == 0);
+			CAGE_TEST(rs[9] == 1);
+			CAGE_TEST(rs[10] == 0);
+			CAGE_TEST(rs[11] == 1);
+			CAGE_TEST(rs[12] == 0);
+			CAGE_TEST(rs[13] == 1);
+			CAGE_TEST(rs[14] == 0);
+			CAGE_TEST(rs[15] == 1);
+			CAGE_TEST(rs[16] == 0);
+			CAGE_TEST(rs[17] == 1);
+			CAGE_TEST(rs[18] == 0);
+			CAGE_TEST(rs[19] == 1);
+			CAGE_TEST(rs[20] == 1);
+		}
+		cpu->program(nullptr);
+		CAGE_TEST(cpu->state() == CpuStateEnum::None);
+	}
+
 	/*
 	{
 		CAGE_TESTCASE("structures");

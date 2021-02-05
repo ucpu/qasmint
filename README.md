@@ -1,6 +1,6 @@
 # qASMint
 
-Queued Assembler Interpreter (pronounced as `qas-mint`) is processor for simplified assembler designed for learning and optimizing less traditional algorithmic tasks.
+Queued Assembler Interpreter (pronounced as `qas-mint`) is processor simulator for simplified assembler designed for learning and optimizing less traditional algorithmic tasks.
 
 Distinctive feature of the processor is availability of multiple stacks, queues, and tapes.
 
@@ -11,7 +11,8 @@ This makes it well suitable for simulating traditional processors, turing machin
 Instructions can be disabled too, individually or whole categories.
 This is useful in teaching how they work.
 
-Every run of the processor will count number of register and memory accesses and instructions executed. This makes it awesome tool for learning algorithmic complexity and for comparing different programs solving same tasks.
+Every run of the processor will count instructions executed.
+This makes it awesome tool for learning algorithmic complexity and for comparing different programs solving same tasks.
 
 # Example Programs
 
@@ -166,8 +167,8 @@ Empty lines are ignored.
 Instructions descriptions in the following chapters use [brackets] to denote placeholders, which should be replaced by actual values in the programs.
 
 Placeholders can be replaced by a name of a register (eg. `z` or `K`).
-Some instructions allow use of a structure (eg. `SS` or `QB`).
-Additionally, memory pools may, also have address specified (eg. `MC@42` - which denotes 42nd element of the C memory pool).
+Some instructions allow use of a structure (eg. stack `SS` or queue `QB`).
+Additionally, memory pools may have address specified (eg. `MC@42` - which denotes 42nd element of the C memory pool).
 
 > _Note:_ Some instructions can be used with some structures or registers only.
 This is usually indicated further in the description by highlighting the type.
@@ -240,7 +241,7 @@ All logic instructions operate on unsigned integers.
 
 *binv* [dst] - all bits in [dst] are inverted in place.
 
-## Conditions
+## Comparisons
 
 *eq*, *neq*, *lt*, *gt*, *lte*, *gte* [dst] [left] [right] - reads its parameters from [left] and [right], applies unsigned integer comparison, and stores the result in [dst].
 
@@ -248,7 +249,7 @@ All logic instructions operate on unsigned integers.
 
 *feq*, *fneq*, *flt*, *fgt*, *flte*, *fgte* [dst] [left] [right] - reads its parameters from [left] and [right], applies floating point comparison, and stores the result in [dst].
 
-*fisnan*, *fisinf*, *fisfin* [dst] [src] - reads its parameter from [src], and stores the result in [dst].
+*fisnan*, *fisinf*, *fisfin*, *fisnorm* [dst] [src] - reads its parameter from [src], and stores the result in [dst].
 
 *test* [dst] [src] - reads its parameter from [src], does integer comparison, and stores the result in [dst].
 If the value is zero, the result is 0, otherwise 1.
@@ -288,10 +289,11 @@ This instruction terminates the program if the queue is disabled or empty.
 This instruction terminates the program if the queue is disabled or full.
 
 *left*, *right* [dst] - moves the pointer on *tape* [dst] to left/right by 1 element.
-This instruction terminates the program if the tape is disabled or the move would surpass its capacity.
+These instructions terminate the program if the tape is disabled or the move would surpass its capacity.
 
 *indleft*, *indright* [dst] - moves the pointer on *tape* [dst] to left/right by unsigned integer `i` elements.
-This instruction terminates the program if the tape is disabled or the move would surpass its capacity.
+These instructions terminate the program if the tape is disabled or the move would surpass its capacity.
+These instructions are disabled by default.
 
 *center* [dst] - centers the pointer on *tape* [dst] to the initial element (position zero).
 This instruction terminates the program if the tape is disabled.
@@ -413,6 +415,7 @@ Set register `z` whether the line was successfully written to the output.
 The time is split into seconds and microseconds stored separately as unsigned integers.
 
 *rdseedany* - initializes random number generator with random seed.
+This instruction is disabled by default.
 
 *rdseed* [a] [b] [c] [d] - initializes random number generator with four unsigned integers taken from [a], [b], [c], and [d].
 
@@ -422,15 +425,19 @@ The time is split into seconds and microseconds stored separately as unsigned in
 
 *frand* [dst] - generate random floating point number and store it in [dst].
 
-*terminate* - explicitly request program termination.
-
 *profiling* [literal] - disable profiling if the unsigned integer [literal] is zero and enable it otherwise.
 This instruction is disabled by default.
-Reaching this instruction when disabled does not terminate the program and ignores it.
+Reaching this instruction when disabled does not terminate the program.
 
 *tracing* [literal] - disable tracing if the unsigned integer [literal] is zero and enable it otherwise.
 This instruction is disabled by default.
-Reaching this instruction when disabled does not terminate the program and ignores it.
+Reaching this instruction when disabled does not terminate the program.
+
+*breakpoint* - explicitly request program interruption.
+This instruction is disabled by default.
+Reaching this instruction when disabled does not terminate the program.
+
+*terminate* - explicitly request program termination.
 
 # Profiling And Tracing
 
@@ -449,7 +456,7 @@ Tracing is split into few categories, each can be enabled/disabled individually:
 
 Tracing runs the program as usual and simultaneously logs selected actions into separate file.
 
-> _Warning:_ Tracing may slow the program significantly due to extensive file operations and is therefore discouraged unless needed.
+> _Warning:_ Tracing may slow the program significantly and is therefore discouraged unless needed.
 
 Both profiling and tracing can additionally be controlled from the program.
 Special instructions can temporarily enable or disable tracing or profiling.
