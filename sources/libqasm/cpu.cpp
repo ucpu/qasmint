@@ -208,8 +208,13 @@ namespace qasm
 				}
 			} break;
 			case InstructionEnum::indcpy:
-				set(get('d' - 'a' + 26), get(get('s' - 'a' + 26)));
-				break;
+			{
+				uint8 d = get('d' - 'a' + 26);
+				uint8 s = get('s' - 'a' + 26);
+				if (d >= 52 || s >= 52)
+					CAGE_THROW_ERROR(Exception, "register index out of range");
+				set(d, get(s));
+			} break;
 			case InstructionEnum::add:
 			{
 				uint8 d, l, r;
@@ -427,19 +432,91 @@ namespace qasm
 				set(d, (uint32)fget(s).value);
 			} break;
 			case InstructionEnum::and_:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, get(l) && get(r));
+			} break;
 			case InstructionEnum::or_:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, get(l) || get(r));
+			} break;
 			case InstructionEnum::xor_:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, (get(l) != 0) != (get(r) != 0));
+			} break;
 			case InstructionEnum::not_:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				set(d, !get(s));
+			} break;
 			case InstructionEnum::inv:
+			{
+				uint8 d;
+				params >> d;
+				set(d, !get(d));
+			} break;
 			case InstructionEnum::shl:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, get(l) << get(r));
+			} break;
 			case InstructionEnum::shr:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, get(l) >> get(r));
+			} break;
 			case InstructionEnum::rol:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				uint32 n = get(l), k = get(r);
+				set(d, (n << k) | (n >> (32 - k)));
+			} break;
 			case InstructionEnum::ror:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				uint32 n = get(l), k = get(r);
+				set(d, (n >> k) | (n << (32 - k)));
+			} break;
 			case InstructionEnum::band:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, get(l) & get(r));
+			} break;
 			case InstructionEnum::bor:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, get(l) | get(r));
+			} break;
 			case InstructionEnum::bxor:
+			{
+				uint8 d, l, r;
+				params >> d >> l >> r;
+				set(d, get(l) ^ get(r));
+			} break;
 			case InstructionEnum::bnot:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				set(d, ~get(s));
+			} break;
 			case InstructionEnum::binv:
+			{
+				uint8 d;
+				params >> d;
+				set(d, ~get(d));
+			} break;
 			case InstructionEnum::eq:
 			case InstructionEnum::neq:
 			case InstructionEnum::lt:

@@ -28,7 +28,7 @@ rand J        # generate random number and store it in register J
 write J       # write the number from register J to output buffer
 writeln       # flush the output buffer to standard output
 inc I         # increment the counter of generated numbers
-lt z I T
+lt z I T      # compare I < T and store it in z
 condjmp Loop  # go generate another number if we are below the limit
 ```
 
@@ -195,6 +195,7 @@ This is usually indicated further in the description by highlighting the type.
 *condcpy* [dst] [src] - if value in `z` evaluates true, copy value from register [src] into register [dst], otherwise do nothing.
 
 *indcpy* - copy value from register whose index is read from `s`, into register whose index is read from `d`.
+Explicit registers (A-Z) are indexed 0 through 25 and implicit register (a-z) are indexed 26 through 51.
 This instruction terminates the program if either of the indices is invalid.
 
 ## Arithmetic instructions

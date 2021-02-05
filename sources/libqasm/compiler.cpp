@@ -68,7 +68,10 @@ namespace qasm
 				}
 				CAGE_THROW_ERROR(Exception, "invalid character");
 			}
-			return trim(subString(line, 0, commentStart));
+			string s = trim(subString(line, 0, commentStart));
+			s = replace(s, "\t", " ");
+			s = replace(s, "  ", " ");
+			return s;
 		}
 
 		void validateName(const string &name)
@@ -135,6 +138,7 @@ namespace qasm
 		void processLine(string &line)
 		{
 			const string instruction = split(line);
+			// registers
 			if (instruction == "reset")
 			{
 				insert(InstructionEnum::reset);
@@ -197,6 +201,7 @@ namespace qasm
 			{
 				insert(InstructionEnum::indcpy);
 			}
+			// arithmetic
 			else if (instruction == "add")
 			{
 				insert(InstructionEnum::add);
@@ -413,6 +418,100 @@ namespace qasm
 				params << getRegister(line);
 				params << getRegister(line);
 			}
+			// logic
+			else if (instruction == "and")
+			{
+				insert(InstructionEnum::and_);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "or")
+			{
+				insert(InstructionEnum::or_);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "xor")
+			{
+				insert(InstructionEnum::xor_);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "not")
+			{
+				insert(InstructionEnum::not_);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "inv")
+			{
+				insert(InstructionEnum::inv);
+				params << getRegister(line);
+			}
+			else if (instruction == "shl")
+			{
+				insert(InstructionEnum::shl);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "shr")
+			{
+				insert(InstructionEnum::shr);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "rol")
+			{
+				insert(InstructionEnum::rol);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "ror")
+			{
+				insert(InstructionEnum::ror);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "band")
+			{
+				insert(InstructionEnum::band);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "bor")
+			{
+				insert(InstructionEnum::bor);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "bxor")
+			{
+				insert(InstructionEnum::bxor);
+				params << getRegister(line);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "bnot")
+			{
+				insert(InstructionEnum::bnot);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "binv")
+			{
+				insert(InstructionEnum::binv);
+				params << getRegister(line);
+			}
+
 			// todo remaining instructions
 		}
 
