@@ -32,6 +32,8 @@ namespace qasm
 			limits.tapesCount = ini->getUint32("tapes", "instances", limits.stacksCount);
 		}
 
+		limits.callstackCapacity = ini->getUint32("callstack", "capacity", limits.callstackCapacity);
+
 		return limits;
 	}
 
@@ -60,5 +62,7 @@ namespace qasm
 			ini->setUint32("tapes", "capacity", limits.stackCapacity);
 			ini->setUint32("tapes", "instances", limits.stacksCount);
 		}
+
+		ini->setUint32("callstack", "capacity", limits.callstackCapacity);
 	}
 }

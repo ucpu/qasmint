@@ -96,13 +96,51 @@ namespace qasm
 		uint8 getRegister(string &line)
 		{
 			string n = split(line);
+			if (n.empty())
+				CAGE_THROW_ERROR(Exception, "missing register name parameter");
 			if (n.length() != 1)
-				CAGE_THROW_ERROR(Exception, "invalid register name length");
+				CAGE_THROW_ERROR(Exception, "register name too long");
 			if (n[0] >= 'A' && n[0] <= 'Z')
 				return n[0] - 'A';
 			if (n[0] >= 'a' && n[0] <= 'z')
 				return n[0] - 'z' + 26;
-			CAGE_THROW_ERROR(Exception, "invalid register name");
+			CAGE_THROW_ERROR(Exception, "invalid character in register name");
+		}
+
+		void getStructure(string &line, uint8 &type, uint8 &index, uint32 &address)
+		{
+			string a = split(line);
+			string n = split(a, "@");
+			if (a.empty())
+				address = 0;
+			else
+				address = toUint32(a);
+			if (n.empty())
+				CAGE_THROW_ERROR(Exception, "missing structure name parameter");
+			if (n.length() < 2)
+				CAGE_THROW_ERROR(Exception, "structure name too short");
+			if (n.length() > 2)
+				CAGE_THROW_ERROR(Exception, "structure name too long");
+			if (n[1] < 'A' || n[1] > 'Z')
+				CAGE_THROW_ERROR(Exception, "invalid character in structure instance name");
+			index = n[1] - 'A';
+			switch (n[0])
+			{
+			case 'S': type = 0; break;
+			case 'Q': type = 1; break;
+			case 'T': type = 2; break;
+			case 'M': type = 3; break;
+			default:
+				CAGE_THROW_ERROR(Exception, "invalid character in structure type name");
+			}
+		}
+
+		void getStructure(string &line, uint8 &type, uint8 &index)
+		{
+			uint32 address;
+			getStructure(line, type, index, address);
+			if (address != 0)
+				CAGE_THROW_ERROR(Exception, "address specifier is forbidden here");
 		}
 	}
 
@@ -394,6 +432,24 @@ namespace qasm
 				params << getRegister(line);
 				params << getRegister(line);
 			}
+			else if (instruction == "ffloor")
+			{
+				insert(InstructionEnum::ffloor);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "fround")
+			{
+				insert(InstructionEnum::fround);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
+			else if (instruction == "fceil")
+			{
+				insert(InstructionEnum::fceil);
+				params << getRegister(line);
+				params << getRegister(line);
+			}
 			else if (instruction == "s2f")
 			{
 				insert(InstructionEnum::s2f);
@@ -667,6 +723,216 @@ namespace qasm
 				insert(InstructionEnum::test);
 				params << getRegister(line);
 				params << getRegister(line);
+			}
+			// structures
+			else if (instruction == "load")
+			{
+				uint8 dst = getRegister(line);
+				uint8 type, index;
+				uint32 address;
+				getStructure(line, type, index, address);
+				switch (type)
+				{
+				case 0:
+					insert(InstructionEnum::sload);
+					params << dst << index;
+					break;
+				case 1:
+					insert(InstructionEnum::qload);
+					params << dst << index;
+					break;
+				case 2:
+					insert(InstructionEnum::tload);
+					params << dst << index;
+					break;
+				case 3:
+					insert(InstructionEnum::mload);
+					params << dst << index << address;
+					break;
+				}
+			}
+			else if (instruction == "store")
+			{
+				uint8 type, index;
+				uint32 address;
+				getStructure(line, type, index, address);
+				uint8 src = getRegister(line);
+				switch (type)
+				{
+				case 0:
+					insert(InstructionEnum::sstore);
+					params << index << src;
+					break;
+				case 1:
+					insert(InstructionEnum::qstore);
+					params << index << src;
+					break;
+				case 2:
+					insert(InstructionEnum::tstore);
+					params << index << src;
+					break;
+				case 3:
+					insert(InstructionEnum::mstore);
+					params << index << address << src;
+					break;
+				}
+			}
+			else if (instruction == "indload")
+			{
+				uint8 dst = getRegister(line);
+				uint8 type, index;
+				getStructure(line, type, index);
+				if (type != 3)
+					CAGE_THROW_ERROR(Exception, "indload requires memory pool");
+				insert(InstructionEnum::indload);
+				params << dst << index;
+			}
+			else if (instruction == "indstore")
+			{
+				uint8 type, index;
+				getStructure(line, type, index);
+				if (type != 3)
+					CAGE_THROW_ERROR(Exception, "indstore requires memory pool");
+				uint8 src = getRegister(line);
+				insert(InstructionEnum::indstore);
+				params << index << src;
+			}
+			else if (instruction == "indindload")
+			{
+				insert(InstructionEnum::indindload);
+				params << getRegister(line);
+			}
+			else if (instruction == "indindstore")
+			{
+				insert(InstructionEnum::indindstore);
+				params << getRegister(line);
+			}
+			else if (instruction == "pop")
+			{
+				uint8 dst = getRegister(line);
+				uint8 type, index;
+				getStructure(line, type, index);
+				if (type != 0)
+					CAGE_THROW_ERROR(Exception, "pop requires stack");
+				insert(InstructionEnum::pop);
+				params << dst << index;
+			}
+			else if (instruction == "push")
+			{
+				uint8 type, index;
+				getStructure(line, type, index);
+				if (type != 0)
+					CAGE_THROW_ERROR(Exception, "push requires stack");
+				uint8 src = getRegister(line);
+				insert(InstructionEnum::push);
+				params << index << src;
+			}
+			else if (instruction == "dequeue")
+			{
+				uint8 dst = getRegister(line);
+				uint8 type, index;
+				getStructure(line, type, index);
+				if (type != 1)
+					CAGE_THROW_ERROR(Exception, "dequeue requires queue");
+				insert(InstructionEnum::dequeue);
+				params << dst << index;
+			}
+			else if (instruction == "enqueue")
+			{
+				uint8 type, index;
+				getStructure(line, type, index);
+				if (type != 1)
+					CAGE_THROW_ERROR(Exception, "enqueue requires queue");
+				uint8 src = getRegister(line);
+				insert(InstructionEnum::enqueue);
+				params << index << src;
+			}
+			else if (instruction == "left")
+			{
+				uint8 type, index;
+				getStructure(line, type, index);
+				if (type != 2)
+					CAGE_THROW_ERROR(Exception, "left requires tape");
+				insert(InstructionEnum::left);
+				params << index;
+			}
+			else if (instruction == "right")
+			{
+				uint8 type, index;
+				getStructure(line, type, index);
+				if (type != 2)
+					CAGE_THROW_ERROR(Exception, "right requires tape");
+				insert(InstructionEnum::right);
+				params << index;
+			}
+			else if (instruction == "center")
+			{
+				uint8 type, index;
+				getStructure(line, type, index);
+				if (type != 2)
+					CAGE_THROW_ERROR(Exception, "center requires tape");
+				insert(InstructionEnum::center);
+				params << index;
+			}
+			else if (instruction == "swap")
+			{
+				uint8 type1, index1, type2, index2;
+				getStructure(line, type1, index1);
+				getStructure(line, type2, index2);
+				if (type1 != type2)
+					CAGE_THROW_ERROR(Exception, "swap requires structures of same type");
+				switch (type1)
+				{
+				case 0: insert(InstructionEnum::sswap); break;
+				case 1: insert(InstructionEnum::qswap); break;
+				case 2: insert(InstructionEnum::tswap); break;
+				case 3: insert(InstructionEnum::mswap); break;
+				}
+				params << index1 << index2;
+			}
+			else if (instruction == "indswap")
+			{
+				uint8 type1, index1, type2, index2;
+				getStructure(line, type1, index1);
+				getStructure(line, type2, index2);
+				if (type1 != type2)
+					CAGE_THROW_ERROR(Exception, "indswap requires structures of same type");
+				if (index1 != 0 || index2 != 0)
+					CAGE_THROW_ERROR(Exception, "indswap requires A instance of structure to denote the type");
+				switch (type1)
+				{
+				case 0: insert(InstructionEnum::indsswap); break;
+				case 1: insert(InstructionEnum::indqswap); break;
+				case 2: insert(InstructionEnum::indtswap); break;
+				case 3: insert(InstructionEnum::indmswap); break;
+				}
+			}
+			else if (instruction == "stat")
+			{
+				uint8 type, index;
+				getStructure(line, type, index);
+				switch (type)
+				{
+				case 0: insert(InstructionEnum::sstat); break;
+				case 1: insert(InstructionEnum::qstat); break;
+				case 2: insert(InstructionEnum::tstat); break;
+				case 3: insert(InstructionEnum::mstat); break;
+				}
+				params << index;
+			}
+			else if (instruction == "indstat")
+			{
+				uint8 type, index;
+				getStructure(line, type, index);
+				if (index != 0)
+					CAGE_THROW_ERROR(Exception, "indstat requires A instance of structure to denote the type");
+				switch (type)
+				{
+				case 0: insert(InstructionEnum::indsstat); break;
+				case 1: insert(InstructionEnum::indqstat); break;
+				case 2: insert(InstructionEnum::indtstat); break;
+				case 3: insert(InstructionEnum::indmstat); break;
+				}
 			}
 
 			// todo remaining instructions

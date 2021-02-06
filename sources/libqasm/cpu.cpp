@@ -11,36 +11,226 @@ namespace qasm
 {
 	namespace
 	{
-		struct Stack
+		struct Stat
 		{
-			std::vector<uint32> data;
+			uint32 capacity = 0;
+			uint32 size = 0;
+			sint32 position = 0;
+			sint32 leftmost = 0;
+			sint32 rightmost = 0;
 			bool enabled = false;
+			bool writable = true;
 		};
 
-		struct Queue
+		struct StructureBase
 		{
-			std::vector<uint32> data;
+			uint32 capacity = 0;
 			bool enabled = false;
+
+			void checkEnabled() const
+			{
+				if (!enabled)
+					CAGE_THROW_ERROR(Exception, "structure is disabled");
+			}
 		};
 
-		struct Tape
+		struct Stack : public StructureBase
 		{
 			std::vector<uint32> data;
-			uint32 center = 0;
-			uint32 position = 0;
-			bool enabled = false;
+
+			Stat stat() const
+			{
+				Stat s;
+				s.capacity = capacity;
+				s.size = numeric_cast<uint32>(data.size());
+				s.enabled = enabled;
+				return s;
+			}
+
+			uint32 load() const
+			{
+				checkEnabled();
+				if (data.empty())
+					CAGE_THROW_ERROR(Exception, "structure is empty");
+				return data.back();
+			}
+
+			void store(uint32 value)
+			{
+				checkEnabled();
+				if (data.empty())
+					CAGE_THROW_ERROR(Exception, "structure is empty");
+				data.back() = value;
+			}
+
+			uint32 pop()
+			{
+				checkEnabled();
+				if (data.empty())
+					CAGE_THROW_ERROR(Exception, "structure is empty");
+				uint32 val = data.back();
+				data.pop_back();
+				return val;
+			}
+
+			void push(uint32 value)
+			{
+				checkEnabled();
+				if (data.size() == capacity)
+					CAGE_THROW_ERROR(Exception, "structure is full");
+				data.push_back(value);
+			}
 		};
 
-		struct Memory
+		struct Queue : public StructureBase
 		{
 			std::vector<uint32> data;
-			bool enabled = false;
+
+			Stat stat() const
+			{
+				Stat s;
+				s.capacity = capacity;
+				s.size = numeric_cast<uint32>(data.size());
+				s.enabled = enabled;
+				return s;
+			}
+
+			uint32 load() const
+			{
+				checkEnabled();
+				if (data.empty())
+					CAGE_THROW_ERROR(Exception, "structure is empty");
+				return data.front();
+			}
+
+			void store(uint32 value)
+			{
+				checkEnabled();
+				if (data.empty())
+					CAGE_THROW_ERROR(Exception, "structure is empty");
+				data.front() = value;
+			}
+
+			uint32 dequeue()
+			{
+				checkEnabled();
+				if (data.empty())
+					CAGE_THROW_ERROR(Exception, "structure is empty");
+				uint32 val = data.front();
+				data.erase(data.begin());
+				return val;
+			}
+
+			void enqueue(uint32 value)
+			{
+				checkEnabled();
+				if (data.size() == capacity)
+					CAGE_THROW_ERROR(Exception, "structure is full");
+				data.push_back(value);
+			}
+		};
+
+		struct Tape : public StructureBase
+		{
+			std::vector<uint32> data;
+			sint32 offset = 0;
+			sint32 position = 0;
+
+			Stat stat() const
+			{
+				Stat s;
+				s.capacity = capacity;
+				s.size = numeric_cast<uint32>(data.size());
+				s.position = position;
+				s.leftmost = -offset;
+				s.rightmost = s.size - offset - 1;
+				s.enabled = enabled;
+				return s;
+			}
+
+			uint32 load() const
+			{
+				checkEnabled();
+				return data[offset + position];
+			}
+
+			void store(uint32 value)
+			{
+				checkEnabled();
+				data[offset + position] = value;
+			}
+
+			void left()
+			{
+				checkEnabled();
+				if (position == -offset)
+				{
+					if (data.size() == capacity)
+						CAGE_THROW_ERROR(Exception, "structure is full");
+					data.resize(data.size() + 1, 0);
+					for (uint32 i = 1; i < data.size(); i++)
+						data[i] = data[i - 1];
+					data[0] = 0;
+					offset++;
+				}
+				position--;
+			}
+
+			void right()
+			{
+				checkEnabled();
+				if (position + offset + 1 == data.size())
+				{
+					if (data.size() == capacity)
+						CAGE_THROW_ERROR(Exception, "structure is full");
+					data.resize(data.size() + 1, 0);
+				}
+				position++;
+			}
+
+			void center()
+			{
+				checkEnabled();
+				position = 0;
+			}
+		};
+
+		struct Memory : public StructureBase
+		{
+			std::vector<uint32> data;
 			bool readOnly = false;
+
+			Stat stat() const
+			{
+				Stat s;
+				s.capacity = capacity;
+				s.size = numeric_cast<uint32>(data.size());
+				s.enabled = enabled;
+				s.writable = !readOnly;
+				return s;
+			}
+
+			uint32 load(uint32 addr) const
+			{
+				checkEnabled();
+				if (addr >= data.size())
+					CAGE_THROW_ERROR(Exception, "memory address out of bounds");
+				return data[addr];
+			}
+
+			void store(uint32 addr, uint32 value)
+			{
+				checkEnabled();
+				if (addr >= data.size())
+					CAGE_THROW_ERROR(Exception, "memory address out of bounds");
+				data[addr] = value;
+			}
 		};
 
 		struct Callstack
 		{
 			std::vector<uint16> data;
+			uint32 capacity = 0;
 		};
 
 		struct DataState
@@ -49,8 +239,8 @@ namespace qasm
 			Queue queues[26] = {};
 			Tape tapes[26] = {};
 			Memory memories[26] = {};
-			uint32 registers[26 + 26] = {};
-			Callstack callstack;
+			uint32 registers_[26 + 26] = {};
+			Callstack callstack_;
 			uint32 programCounter = 0; // index of current instruction in the program
 		};
 	}
@@ -76,6 +266,10 @@ namespace qasm
 				queues[i].enabled = i < config.limits.queuesCount;
 				tapes[i].enabled = i < config.limits.tapesCount;
 				memories[i].enabled = i < config.limits.memoriesCount;
+				stacks[i].capacity = config.limits.stackCapacity;
+				queues[i].capacity = config.limits.queueCapacity;
+				tapes[i].capacity = config.limits.tapeCapacity;
+				memories[i].capacity = config.limits.memoryCapacity[i];
 				if (tapes[i].enabled)
 					tapes[i].data.resize(1, 0);
 				if (memories[i].enabled)
@@ -84,43 +278,57 @@ namespace qasm
 					memories[i].readOnly = config.limits.memoryReadOnly[i];
 				}
 			}
+			callstack_.capacity = config.limits.callstackCapacity;
 			state = CpuStateEnum::Initialized;
 		}
 
 		uint32 get(uint8 index) const
 		{
 			CAGE_ASSERT(index < 26 + 26);
-			return registers[index];
+			return registers_[index];
 		}
 
 		void set(uint8 index, uint32 value)
 		{
 			CAGE_ASSERT(index < 26 + 26);
-			registers[index] = value;
+			registers_[index] = value;
 		}
 
 		sint32 iget(uint8 index) const
 		{
 			CAGE_ASSERT(index < 26 + 26);
-			return *(sint32 *)&registers[index];
+			return *(sint32 *)&registers_[index];
 		}
 
 		void iset(uint8 index, sint32 value)
 		{
 			CAGE_ASSERT(index < 26 + 26);
-			registers[index] = *(uint32 *)&value;
+			registers_[index] = *(uint32 *)&value;
 		}
 
 		real fget(uint8 index) const
 		{
 			CAGE_ASSERT(index < 26 + 26);
-			return *(real *)&registers[index];
+			return *(real *)&registers_[index];
 		}
 
 		void fset(uint8 index, real value)
 		{
 			CAGE_ASSERT(index < 26 + 26);
-			registers[index] = *(uint32 *)&value;
+			registers_[index] = *(uint32 *)&value;
+		}
+
+		void set(const Stat &stat)
+		{
+			set('e' - 'a' + 26, stat.enabled);
+			set('a' - 'a' + 26, stat.size > 0);
+			set('f' - 'a' + 26, stat.size == stat.capacity);
+			set('w' - 'a' + 26, stat.writable);
+			set('c' - 'a' + 26, stat.capacity);
+			set('s' - 'a' + 26, stat.size);
+			iset('p' - 'a' + 26, stat.position);
+			iset('l' - 'a' + 26, stat.leftmost);
+			iset('r' - 'a' + 26, stat.rightmost);
 		}
 
 		void step()
@@ -239,7 +447,7 @@ namespace qasm
 				uint8 d, l, r;
 				params >> d >> l >> r;
 				uint32 e = get(r);
-				if (!e)
+				if (e == 0)
 					CAGE_THROW_ERROR(Exception, "division by zero");
 				set(d, get(l) / e);
 			} break;
@@ -248,7 +456,7 @@ namespace qasm
 				uint8 d, l, r;
 				params >> d >> l >> r;
 				uint32 e = get(r);
-				if (!e)
+				if (e == 0)
 					CAGE_THROW_ERROR(Exception, "division by zero");
 				set(d, get(l) % e);
 			} break;
@@ -287,7 +495,7 @@ namespace qasm
 				uint8 d, l, r;
 				params >> d >> l >> r;
 				sint32 e = iget(r);
-				if (!e)
+				if (e == 0)
 					CAGE_THROW_ERROR(Exception, "division by zero");
 				iset(d, iget(l) / e);
 			} break;
@@ -296,7 +504,7 @@ namespace qasm
 				uint8 d, l, r;
 				params >> d >> l >> r;
 				sint32 e = iget(r);
-				if (!e)
+				if (e == 0)
 					CAGE_THROW_ERROR(Exception, "division by zero");
 				iset(d, iget(l) % e);
 			} break;
@@ -407,6 +615,24 @@ namespace qasm
 				uint8 d, s;
 				params >> d >> s;
 				fset(d, cage::atan(fget(s)).value);
+			} break;
+			case InstructionEnum::ffloor:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				fset(d, cage::floor(fget(s)));
+			} break;
+			case InstructionEnum::fround:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				fset(d, cage::round(fget(s)));
+			} break;
+			case InstructionEnum::fceil:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				fset(d, cage::ceil(fget(s)));
 			} break;
 			case InstructionEnum::s2f:
 			{
@@ -657,38 +883,237 @@ namespace qasm
 				set(d, !!get(s));
 			} break;
 			case InstructionEnum::sload:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				set(d, stacks[s].load());
+			} break;
 			case InstructionEnum::sstore:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				stacks[d].store(get(s));
+			} break;
 			case InstructionEnum::pop:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				set(d, stacks[s].pop());
+			} break;
 			case InstructionEnum::push:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				stacks[d].push(get(s));
+			} break;
 			case InstructionEnum::sswap:
+			{
+				uint8 a, b;
+				params >> a >> b;
+				std::swap(stacks[a], stacks[b]);
+			} break;
 			case InstructionEnum::indsswap:
+			{
+				uint8 a = get('i' - 'a' + 26);
+				uint8 b = get('j' - 'a' + 26);
+				if (a >= 26 || b >= 26)
+					CAGE_THROW_ERROR(Exception, "stack index out of range");
+				std::swap(stacks[a], stacks[b]);
+			} break;
 			case InstructionEnum::sstat:
+			{
+				uint8 s;
+				params >> s;
+				set(stacks[s].stat());
+			} break;
+			case InstructionEnum::indsstat:
+			{
+				uint8 s = get('i' - 'a' + 26);
+				if (s >= 26)
+					CAGE_THROW_ERROR(Exception, "stack index out of range");
+				set(stacks[s].stat());
+			} break;
 			case InstructionEnum::qload:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				set(d, queues[s].load());
+			} break;
 			case InstructionEnum::qstore:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				queues[d].store(get(s));
+			} break;
 			case InstructionEnum::dequeue:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				set(d, queues[s].dequeue());
+			} break;
 			case InstructionEnum::enqueue:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				queues[d].enqueue(get(s));
+			} break;
 			case InstructionEnum::qswap:
+			{
+				uint8 a, b;
+				params >> a >> b;
+				std::swap(queues[a], queues[b]);
+			} break;
 			case InstructionEnum::indqswap:
+			{
+				uint8 a = get('i' - 'a' + 26);
+				uint8 b = get('j' - 'a' + 26);
+				if (a >= 26 || b >= 26)
+					CAGE_THROW_ERROR(Exception, "queue index out of range");
+				std::swap(queues[a], queues[b]);
+			} break;
 			case InstructionEnum::qstat:
+			{
+				uint8 s;
+				params >> s;
+				set(queues[s].stat());
+			} break;
+			case InstructionEnum::indqstat:
+			{
+				uint8 s = get('i' - 'a' + 26);
+				if (s >= 26)
+					CAGE_THROW_ERROR(Exception, "queue index out of range");
+				set(queues[s].stat());
+			} break;
 			case InstructionEnum::tload:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				set(d, tapes[s].load());
+			} break;
 			case InstructionEnum::tstore:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				tapes[d].store(get(s));
+			} break;
 			case InstructionEnum::left:
+			{
+				uint8 d;
+				params >> d;
+				tapes[d].left();
+			} break;
 			case InstructionEnum::right:
-			case InstructionEnum::indleft:
-			case InstructionEnum::indright:
+			{
+				uint8 d;
+				params >> d;
+				tapes[d].right();
+			} break;
 			case InstructionEnum::center:
+			{
+				uint8 d;
+				params >> d;
+				tapes[d].center();
+			} break;
 			case InstructionEnum::tswap:
+			{
+				uint8 a, b;
+				params >> a >> b;
+				std::swap(tapes[a], tapes[b]);
+			} break;
 			case InstructionEnum::indtswap:
+			{
+				uint8 a = get('i' - 'a' + 26);
+				uint8 b = get('j' - 'a' + 26);
+				if (a >= 26 || b >= 26)
+					CAGE_THROW_ERROR(Exception, "tape index out of range");
+				std::swap(tapes[a], tapes[b]);
+			} break;
 			case InstructionEnum::tstat:
+			{
+				uint8 s;
+				params >> s;
+				set(tapes[s].stat());
+			} break;
+			case InstructionEnum::indtstat:
+			{
+				uint8 s = get('i' - 'a' + 26);
+				if (s >= 26)
+					CAGE_THROW_ERROR(Exception, "tape index out of range");
+				set(tapes[s].stat());
+			} break;
 			case InstructionEnum::mload:
+			{
+				uint8 d, s; uint32 a;
+				params >> d >> s >> a;
+				set(d, memories[s].load(a));
+			} break;
 			case InstructionEnum::indload:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				uint32 a = get('i' - 'a' + 26);
+				set(d, memories[s].load(a));
+			} break;
 			case InstructionEnum::indindload:
+			{
+				uint8 d;
+				params >> d;
+				uint32 a = get('i' - 'a' + 26);
+				uint8 s = get('j' - 'a' + 26);
+				if (s >= 26)
+					CAGE_THROW_ERROR(Exception, "memory index out of range");
+				set(d, memories[s].load(a));
+			} break;
 			case InstructionEnum::mstore:
+			{
+				uint8 d, s; uint32 a;
+				params >> d >> a >> s;
+				memories[d].store(a, get(s));
+			} break;
 			case InstructionEnum::indstore:
+			{
+				uint8 d, s;
+				params >> d >> s;
+				uint32 a = get('i' - 'a' + 26);
+				memories[d].store(a, get(s));
+			} break;
 			case InstructionEnum::indindstore:
+			{
+				uint8 s;
+				params >> s;
+				uint32 a = get('i' - 'a' + 26);
+				uint8 d = get('j' - 'a' + 26);
+				if (d >= 26)
+					CAGE_THROW_ERROR(Exception, "memory index out of range");
+				memories[d].store(a, get(s));
+			} break;
 			case InstructionEnum::mswap:
+			{
+				uint8 a, b;
+				params >> a >> b;
+				std::swap(memories[a], memories[b]);
+			} break;
 			case InstructionEnum::indmswap:
+			{
+				uint8 a = get('i' - 'a' + 26);
+				uint8 b = get('j' - 'a' + 26);
+				if (a >= 26 || b >= 26)
+					CAGE_THROW_ERROR(Exception, "memory index out of range");
+				std::swap(memories[a], memories[b]);
+			} break;
 			case InstructionEnum::mstat:
+			{
+				uint8 s;
+				params >> s;
+				set(memories[s].stat());
+			} break;
+			case InstructionEnum::indmstat:
+			{
+				uint8 s = get('i' - 'a' + 26);
+				if (s >= 26)
+					CAGE_THROW_ERROR(Exception, "memory index out of range");
+				set(memories[s].stat());
+			} break;
 			case InstructionEnum::jump:
 			case InstructionEnum::condjmp:
 			case InstructionEnum::call:
@@ -821,21 +1246,21 @@ namespace qasm
 	PointerRange<const uint32> Cpu::implicitRegisters() const
 	{
 		const CpuImpl *impl = (const CpuImpl *)this;
-		return PointerRange<const uint32>(impl->registers + 26, impl->registers + 26 + 26);
+		return PointerRange<const uint32>(impl->registers_ + 26, impl->registers_ + 26 + 26);
 	}
 
-	PointerRange<const uint32> Cpu::explicitRegisters() const
+	PointerRange<const uint32> Cpu::registers() const
 	{
 		const CpuImpl *impl = (const CpuImpl *)this;
-		return PointerRange<const uint32>(impl->registers, impl->registers + 26);
+		return PointerRange<const uint32>(impl->registers_, impl->registers_ + 26);
 	}
 
-	void Cpu::explicitRegisters(PointerRange<uint32> data)
+	void Cpu::registers(PointerRange<uint32> data)
 	{
 		CAGE_ASSERT(data.size() == 26);
 		CpuImpl *impl = (CpuImpl *)this;
 		CAGE_ASSERT(impl->state == CpuStateEnum::Initialized);
-		detail::memcpy(impl->registers, data.data(), 26 * sizeof(uint32));
+		detail::memcpy(impl->registers_, data.data(), 26 * sizeof(uint32));
 	}
 
 	Holder<PointerRange<const uint32>> Cpu::stack(uint32 index) const

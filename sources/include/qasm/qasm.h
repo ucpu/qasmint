@@ -42,8 +42,8 @@ namespace qasm
 		CpuStateEnum state() const;
 
 		PointerRange<const uint32> implicitRegisters() const;
-		PointerRange<const uint32> explicitRegisters() const;
-		void explicitRegisters(PointerRange<uint32> data); // valid in Initialized state only
+		PointerRange<const uint32> registers() const;
+		void registers(PointerRange<uint32> data); // valid in Initialized state only
 		Holder<PointerRange<const uint32>> stack(uint32 index) const;
 		Holder<PointerRange<const uint32>> queue(uint32 index) const;
 		Holder<PointerRange<const uint32>> tape(uint32 index) const;
@@ -65,6 +65,7 @@ namespace qasm
 		uint32 queuesCount = 4;
 		uint32 tapeCapacity = 1000000;
 		uint32 tapesCount = 4;
+		uint32 callstackCapacity = 1000;
 	};
 
 	CpuLimitsConfig limitsFromIni(Ini *ini);

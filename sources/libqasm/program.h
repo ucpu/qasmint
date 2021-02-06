@@ -50,6 +50,9 @@ namespace qasm
 		fasin,       // R R
 		facos,       // R R
 		fatan,       // R R
+		ffloor,      // R R
+		fround,      // R R
+		fceil,       // R R
 		s2f,         // R R
 		u2f,         // R R
 		f2s,         // R R
@@ -104,6 +107,7 @@ namespace qasm
 		sswap,       // S S
 		indsswap,    //
 		sstat,       // S
+		indsstat,    //
 
 		// queue
 		qload,       // R Q
@@ -113,18 +117,18 @@ namespace qasm
 		qswap,       // Q Q
 		indqswap,    //
 		qstat,       // Q
+		indqstat,    //
 
 		// tape
 		tload,       // R T
 		tstore,      // T R
 		left,        // T
 		right,       // T
-		indleft,     // T
-		indright,    // T
 		center,      // T
 		tswap,       // T T
 		indtswap,    //
 		tstat,       // T
+		indtstat,    //
 
 		// memory
 		mload,       // R M uint32
@@ -136,6 +140,7 @@ namespace qasm
 		mswap,       // M M
 		indmswap,    //
 		mstat,       // M
+		indmstat,    //
 
 		// jumps
 		jump,        // uint32

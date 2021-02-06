@@ -59,7 +59,7 @@ idiv R M N
 		}
 		{
 			CAGE_TESTCASE("verify registers");
-			const auto rs = cpu->explicitRegisters();
+			const auto rs = cpu->registers();
 			CAGE_TEST(rs.size() == 26);
 			CAGE_TEST(rs[0] == uint32(42));
 			CAGE_TEST(rs[1] == uint32(13));
@@ -129,7 +129,7 @@ binv     V # keep the spaces before the register name to test it
 		}
 		{
 			CAGE_TESTCASE("verify");
-			const auto rs = cpu->explicitRegisters();
+			const auto rs = cpu->registers();
 			CAGE_TEST(rs.size() == 26);
 			CAGE_TEST(rs[0] == 1);
 			CAGE_TEST(rs[1] == 0);
@@ -198,7 +198,7 @@ test U A   # 1
 		}
 		{
 			CAGE_TESTCASE("verify");
-			const auto rs = cpu->explicitRegisters();
+			const auto rs = cpu->registers();
 			CAGE_TEST(rs.size() == 26);
 			CAGE_TEST(rs[2] == 0);
 			CAGE_TEST(rs[3] == 1);
@@ -224,7 +224,6 @@ test U A   # 1
 		CAGE_TEST(cpu->state() == CpuStateEnum::None);
 	}
 
-	/*
 	{
 		CAGE_TESTCASE("structures");
 		constexpr const char source[] = R"asm(
@@ -261,6 +260,12 @@ right TA
 set A 24
 store TA A
 load T TA
+
+set A 30
+store MA@13 A
+set A 31
+store MA@42 A
+load M MA@13
 )asm";
 		Holder<BinaryProgram> program = compiler->compile(source);
 		CAGE_TEST(cpu->state() == CpuStateEnum::None);
@@ -275,22 +280,29 @@ load T TA
 			CAGE_TESTCASE("verify stack");
 			const auto s = cpu->stack(0);
 			CAGE_TEST(s.size() == 3);
-			CAGE_TEST(cpu->explicitRegisters()['S' - 'A'] == 4);
+			CAGE_TEST(cpu->registers()['S' - 'A'] == 4);
 		}
 		{
 			CAGE_TESTCASE("verify queue");
 			const auto q = cpu->queue(0);
 			CAGE_TEST(q.size() == 3);
-			CAGE_TEST(cpu->explicitRegisters()['Q' - 'A'] == 10);
+			CAGE_TEST(cpu->registers()['Q' - 'A'] == 10);
 		}
 		{
 			CAGE_TESTCASE("verify tape");
 			const auto t = cpu->tape(0);
 			CAGE_TEST(t.size() == 4);
-			CAGE_TEST(cpu->explicitRegisters()['T' - 'A'] == 24);
+			CAGE_TEST(cpu->registers()['T' - 'A'] == 24);
+		}
+		{
+			CAGE_TESTCASE("verify memory");
+			const auto t = cpu->memory(0);
+			CAGE_TEST(t.size() == CpuLimitsConfig().memoryCapacity[0]);
+			CAGE_TEST(cpu->memory(0)[13] == 30);
+			CAGE_TEST(cpu->memory(0)[42] == 31);
+			CAGE_TEST(cpu->registers()['M' - 'A'] == 30);
 		}
 		cpu->program(nullptr);
 		CAGE_TEST(cpu->state() == CpuStateEnum::None);
 	}
-	*/
 }

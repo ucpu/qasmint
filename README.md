@@ -217,7 +217,7 @@ Division by zero terminates the program.
 
 *fadd*, *fsub*, *fmul*, *fdiv*, *fpow*, *fatan2* [dst] [left] [right] - floating point arithmetic operations, reads its parameters from [left] and [right] and stores the result in [dst].
 
-*fabs*, *fsqrt*, *flog*, *fsin*, *fcos*, *ftan*, *fasin*, *facos*, *fatan* [dst] [src] - floating point arithmetic operations, reads its parameter from [src] and stores the result in [dst].
+*fabs*, *fsqrt*, *flog*, *fsin*, *fcos*, *ftan*, *fasin*, *facos*, *fatan*, *ffloor*, *fround*, *fceil* [dst] [src] - floating point arithmetic operations, reads its parameter from [src] and stores the result in [dst].
 
 *s2f*, *u2f* [dst] [src] - converts signed or unsigned integer to floating point number.
 
@@ -257,16 +257,18 @@ If the value is zero, the result is 0, otherwise 1.
 ## Memory structures
 
 *load* [dst] [src] - reads value from [src], which may be top cell of a stack, _front_ cell of a queue, cell at current position on a tape or a cell in a memory pool, and stores it into register [dst].
+Use @-notation to define the address when accessing memory pool.
 This instruction terminates the program if the cell does not exists.
 This instruction does NOT remove elements from the structures.
 
 *indload* [dst] [src] - read `i`-th cell from *memory pool* [src] and store it in [dst].
 This instruction terminates the program if the cell does not exists.
 
-*indindload* [src] - read `i`-th cell from `j`-th memory pool and store it in [dst].
+*indindload* [dst] - read `i`-th cell from `j`-th memory pool and store it in [dst].
 This instruction terminates the program if the cell does not exists.
 
 *store* [dst] [src] - reads value from register [src] and stores it in the top cell of a stack, _front_ cell of a queue, cell at current position on a tape or a cell in memory pool.
+Use @-notation to define the address when accessing memory pool.
 This instruction terminates the program if the cell does not exists or is read only.
 This instruction does NOT add new elements to the structures.
 
@@ -291,17 +293,13 @@ This instruction terminates the program if the queue is disabled or full.
 *left*, *right* [dst] - moves the pointer on *tape* [dst] to left/right by 1 element.
 These instructions terminate the program if the tape is disabled or the move would surpass its capacity.
 
-*indleft*, *indright* [dst] - moves the pointer on *tape* [dst] to left/right by unsigned integer `i` elements.
-These instructions terminate the program if the tape is disabled or the move would surpass its capacity.
-These instructions are disabled by default.
-
 *center* [dst] - centers the pointer on *tape* [dst] to the initial element (position zero).
 This instruction terminates the program if the tape is disabled.
 
-*sswap* [left] [right] - swap structures [left] and [right].
+*swap* [left] [right] - swap structures [left] and [right].
 The structures must be of same type, otherwise the program is ill formed.
 
-*indsswap* [src] - swap `i`-th instance of structure [src] and `j`-th instance of structure [src].
+*indswap* [src] - swap `i`-th instance of structure [src] and `j`-th instance of structure [src].
 This instruction terminates the program if either of the structures do not exists.
 
 *stat* [src] - retrieves instructions about the structure [src].
@@ -314,6 +312,8 @@ Set register `s` to current size of the structure.
 Set register `p` to current position on a tape.
 Set register `l` to leftmost index of a valid element on a tape.
 Set register `r` to rightmost index of a valid element on a tape.
+
+*indstat* [src] - retrieves instructions about `i`-th instance of structure [src].
 
 ## Jumps
 
