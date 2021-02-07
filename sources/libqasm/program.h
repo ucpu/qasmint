@@ -171,19 +171,21 @@ namespace qasm
 		wclear,
 		rwswap,
 
-		// miscellaneous
-		timer,       // R R
+		// random
 		rdseedany,   //
 		rdseed,      // R R R R
 		rand,        // R
 		irand,       // R
 		frand,       // R
+
+		// miscellaneous
 		profiling,   // bool
 		tracing,     // bool
 		breakpoint,  //
-		terminate,   //
-		disabled,    //
 		exit,        //
+		terminate,   //
+		unreachable, //
+		disabled,    //
 	};
 
 	struct ProgramImpl : public Program

@@ -409,10 +409,7 @@ Set register `z` whether the line was successfully written to the output.
 
 *rwswap* - swap current input and output buffers.
 
-## Miscelaneous
-
-*timer* [s] [m] - retrieves time elapsed since start of the program run and stores it in the [s] and [m].
-The time is split into seconds and microseconds stored separately as unsigned integers.
+## Random
 
 *rdseedany* - initializes random number generator with random seed.
 This instruction is disabled by default.
@@ -424,6 +421,8 @@ This instruction is disabled by default.
 *irand* [dst] - generate random signed integer and store it in [dst].
 
 *frand* [dst] - generate random floating point number and store it in [dst].
+
+## Miscelaneous
 
 *profiling* [literal] - disable profiling if the unsigned integer [literal] is zero and enable it otherwise.
 This instruction is disabled by default.

@@ -2,16 +2,6 @@
 
 #include "main.h"
 
-namespace
-{
-	void ftest(uint32 register_, real expected)
-	{
-		real value = *(real *)&register_;
-		real diff = abs(value - expected);
-		CAGE_TEST(diff < 1e-4);
-	}
-}
-
 void testCompilation()
 {
 	CAGE_TESTCASE("compilation");
@@ -65,7 +55,7 @@ asdfg
 	{
 		CAGE_TESTCASE("missing parameter");
 		constexpr const char source[] = R"asm(
-set A
+set
 )asm";
 		CAGE_TEST_THROWN(newCompiler()->compile(source));
 	}
@@ -234,6 +224,52 @@ swap SA QB
 		CAGE_TESTCASE("invalid label name");
 		constexpr const char source[] = R"asm(
 label AA
+)asm";
+		CAGE_TEST_THROWN(newCompiler()->compile(source));
+	}
+
+	{
+		CAGE_TESTCASE("label not found");
+		constexpr const char source[] = R"asm(
+jump InTheHole
+)asm";
+		CAGE_TEST_THROWN(newCompiler()->compile(source));
+	}
+
+	{
+		CAGE_TESTCASE("label not unique");
+		constexpr const char source[] = R"asm(
+label First
+label First
+)asm";
+		CAGE_TEST_THROWN(newCompiler()->compile(source));
+	}
+
+	{
+		CAGE_TESTCASE("function name not unique");
+		constexpr const char source[] = R"asm(
+function First
+function First
+)asm";
+		CAGE_TEST_THROWN(newCompiler()->compile(source));
+	}
+
+	{
+		CAGE_TESTCASE("labels are scoped within function 1");
+		constexpr const char source[] = R"asm(
+jump Start
+function First
+label Start
+)asm";
+		CAGE_TEST_THROWN(newCompiler()->compile(source));
+	}
+
+	{
+		CAGE_TESTCASE("labels are scoped within function 1");
+		constexpr const char source[] = R"asm(
+label Start
+function First
+jump Start
 )asm";
 		CAGE_TEST_THROWN(newCompiler()->compile(source));
 	}

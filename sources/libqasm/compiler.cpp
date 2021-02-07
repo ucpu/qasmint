@@ -181,7 +181,7 @@ namespace qasm
 		{
 			// leaving function without return terminates the program
 			// leaving program scope is successful exit
-			insert(currentFunctionIndex == 0 ? InstructionEnum::exit : InstructionEnum::terminate);
+			insert(currentFunctionIndex == 0 ? InstructionEnum::exit : InstructionEnum::unreachable);
 		}
 
 		void processLabel(string &line)
@@ -215,17 +215,33 @@ namespace qasm
 
 		void processFunction(string &line)
 		{
-			CAGE_THROW_ERROR(NotImplemented, "not yet implemented");
+			scopeExit();
+			validateName(line);
+			Label label;
+			label.function = split(line);
+			if (labelNameToInstruction.count(label))
+				CAGE_THROW_ERROR(Exception, "function name is not unique");
+			labelNameToInstruction[label] = numeric_cast<uint32>(instructions.size());
+			currentFunctionIndex++;
+			functionNameToIndex[label.function] = currentFunctionIndex;
+			functionIndexToName[currentFunctionIndex] = label.function;
 		}
 
 		void processCall(string &line, bool condition)
 		{
-			CAGE_THROW_ERROR(NotImplemented, "not yet implemented");
+			validateName(line);
+			LabelReplacement label;
+			label.function = split(line);
+			insert(condition ? InstructionEnum::condcall : InstructionEnum::call);
+			label.paramsOffset = numeric_cast<uint32>(paramsBuffer.size());
+			label.sourceLine = currentSourceLine;
+			labelsReplacements.push_back(label);
+			params << uint32(m); // this value will be replaced by address of the label after parsing the source code has finished
 		}
 
 		void processReturn(string &line, bool condition)
 		{
-			CAGE_THROW_ERROR(NotImplemented, "not yet implemented");
+			insert(condition ? InstructionEnum::condreturn : InstructionEnum::return_);
 		}
 
 		void processLine(string &line)
@@ -1022,8 +1038,9 @@ namespace qasm
 				auto it = labelNameToInstruction.find(label);
 				if (it == labelNameToInstruction.end())
 				{
-					CAGE_LOG_THROW(stringizer() + label.function + ":" + label.label);
-					CAGE_LOG_THROW(stringizer() + "on " + (label.sourceLine + 1) + "th line");
+					CAGE_LOG_THROW(stringizer() + "function: " + label.function);
+					CAGE_LOG_THROW(stringizer() + "label: " + label.label);
+					CAGE_LOG_THROW(stringizer() + "line number: " + (label.sourceLine + 1));
 					CAGE_THROW_ERROR(Exception, "label not found");
 				}
 				p = it->second;
@@ -1062,7 +1079,7 @@ namespace qasm
 				}
 				catch (...)
 				{
-					CAGE_LOG_THROW(stringizer() + "on " + (currentSourceLine + 1) + "th line:");
+					CAGE_LOG_THROW(stringizer() + "line number: " + (currentSourceLine + 1));
 					CAGE_LOG_THROW(fullLine);
 					throw;
 				}

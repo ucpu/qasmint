@@ -337,6 +337,22 @@ namespace qasm
 			programCounter = position;
 		}
 
+		void fncCall(uint32 position)
+		{
+			if (callstack_.data.size() >= callstack_.capacity)
+				CAGE_THROW_ERROR(Exception, "stack overflow");
+			callstack_.data.push_back(programCounter);
+			programCounter = position;
+		}
+
+		void fncReturn()
+		{
+			if (callstack_.data.empty())
+				CAGE_THROW_ERROR(Exception, "no function to return from");
+			programCounter = callstack_.data.back();
+			callstack_.data.pop_back();
+		}
+
 		void step()
 		{
 			CAGE_ASSERT(state == CpuStateEnum::Running);
@@ -1141,9 +1157,29 @@ namespace qasm
 				}
 			} break;
 			case InstructionEnum::call:
+			{
+				uint32 pos;
+				params >> pos;
+				fncCall(pos);
+			} break;
 			case InstructionEnum::condcall:
+			{
+				if (get('z' - 'a' + 26) != 0)
+				{
+					uint32 pos;
+					params >> pos;
+					fncCall(pos);
+				}
+			} break;
 			case InstructionEnum::return_:
+			{
+				fncReturn();
+			} break;
 			case InstructionEnum::condreturn:
+			{
+				if (get('z' - 'a' + 26) != 0)
+					fncReturn();
+			} break;
 			case InstructionEnum::rstat:
 			case InstructionEnum::wstat:
 			case InstructionEnum::read:
@@ -1161,7 +1197,6 @@ namespace qasm
 			case InstructionEnum::wreset:
 			case InstructionEnum::wclear:
 			case InstructionEnum::rwswap:
-			case InstructionEnum::timer:
 			case InstructionEnum::rdseedany:
 			case InstructionEnum::rdseed:
 			case InstructionEnum::rand:
@@ -1174,17 +1209,20 @@ namespace qasm
 			case InstructionEnum::breakpoint:
 				state = CpuStateEnum::Interrupted;
 				break;
+			case InstructionEnum::exit:
+				state = CpuStateEnum::Finished;
+				break;
 			case InstructionEnum::terminate:
 				CAGE_THROW_ERROR(Exception, "explicit terminate");
+				break;
+			case InstructionEnum::unreachable:
+				CAGE_THROW_ERROR(Exception, "unreachable code path");
 				break;
 			case InstructionEnum::disabled:
 				CAGE_THROW_ERROR(Exception, "disabled instruction");
 				break;
-			case InstructionEnum::exit:
-				state = CpuStateEnum::Finished;
-				break;
 			default:
-				CAGE_THROW_ERROR(Exception, "invalid instruction");
+				CAGE_THROW_ERROR(Exception, "unknown instruction");
 				break;
 			}
 		}
