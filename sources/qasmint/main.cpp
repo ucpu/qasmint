@@ -13,7 +13,7 @@ int main(int argc, const char *args[])
 		log->output.bind<logOutputStdOut>();
 
 		Holder<Compiler> compiler = newCompiler();
-		Holder<BinaryProgram> program = compiler->compile({});
+		Holder<Program> program = compiler->compile({});
 		Holder<Cpu> cpu = newCpu({});
 
 		// todo

@@ -12,16 +12,25 @@ namespace qasm
 {
 	namespace
 	{
+		using Name = detail::StringBase<20>;
+
 		struct Label
 		{
-			detail::StringBase<20> function;
-			detail::StringBase<20> label;
+			Name function;
+			Name label;
 		};
+
+		bool operator < (const Label &l, const Label &r)
+		{
+			if (l.function == r.function)
+				return l.label < r.label;
+			return l.function < r.function;
+		}
 
 		struct LabelReplacement : public Label
 		{
 			uint32 paramsOffset = m;
-			uint32 sourceLine = m;
+			uint32 sourceLine = m; // for error reporting
 		};
 
 		string decomment(const string &line)
@@ -103,7 +112,7 @@ namespace qasm
 			if (n[0] >= 'A' && n[0] <= 'Z')
 				return n[0] - 'A';
 			if (n[0] >= 'a' && n[0] <= 'z')
-				return n[0] - 'z' + 26;
+				return n[0] - 'a' + 26;
 			CAGE_THROW_ERROR(Exception, "invalid character in register name");
 		}
 
@@ -154,23 +163,69 @@ namespace qasm
 		Serializer params = Serializer(paramsBuffer);
 
 		std::vector<LabelReplacement> labelsReplacements; // which positions in parameters should be updated to what position of label in a function
-		std::map<Label, uint32> labelsPositions;
-		uint32 lastFunction = m;
-		uint32 lastLine = 0;
+		std::map<Label, uint32> labelNameToInstruction;
+		std::map<Name, uint32> functionNameToIndex;
+		std::map<uint32, Name> functionIndexToName;
+		uint32 currentFunctionIndex = 0;
+		uint32 currentSourceLine = 0;
 
 		void insert(InstructionEnum instruction)
 		{
 			instructions.push_back(instruction);
 			paramsOffsets.push_back(numeric_cast<uint32>(paramsBuffer.size()));
-			sourceLines.push_back(lastLine);
-			functionIndices.push_back(lastFunction);
+			sourceLines.push_back(currentSourceLine);
+			functionIndices.push_back(currentFunctionIndex);
 		}
 
 		void scopeExit()
 		{
 			// leaving function without return terminates the program
 			// leaving program scope is successful exit
-			insert(lastFunction == m ? InstructionEnum::exit : InstructionEnum::terminate);
+			insert(currentFunctionIndex == 0 ? InstructionEnum::exit : InstructionEnum::terminate);
+		}
+
+		void processLabel(string &line)
+		{
+			validateName(line);
+			Label label;
+			label.label = split(line);
+			label.function = functionIndexToName.at(currentFunctionIndex);
+			if (labelNameToInstruction.count(label))
+				CAGE_THROW_ERROR(Exception, "label name is not unique");
+			labelNameToInstruction[label] = numeric_cast<uint32>(instructions.size());
+		}
+
+		void processJump(string &line, bool condition)
+		{
+			validateName(line);
+			LabelReplacement label;
+			label.label = split(line);
+			label.function = functionIndexToName.at(currentFunctionIndex);
+			insert(condition ? InstructionEnum::condjmp : InstructionEnum::jump);
+			label.paramsOffset = numeric_cast<uint32>(paramsBuffer.size());
+			label.sourceLine = currentSourceLine;
+			labelsReplacements.push_back(label);
+			params << uint32(m); // this value will be replaced by address of the label after parsing the source code has finished
+		}
+
+		void processCondskip(string &line)
+		{
+			CAGE_THROW_ERROR(NotImplemented, "not yet implemented");
+		}
+
+		void processFunction(string &line)
+		{
+			CAGE_THROW_ERROR(NotImplemented, "not yet implemented");
+		}
+
+		void processCall(string &line, bool condition)
+		{
+			CAGE_THROW_ERROR(NotImplemented, "not yet implemented");
+		}
+
+		void processReturn(string &line, bool condition)
+		{
+			CAGE_THROW_ERROR(NotImplemented, "not yet implemented");
 		}
 
 		void processLine(string &line)
@@ -934,16 +989,48 @@ namespace qasm
 				case 3: insert(InstructionEnum::indmstat); break;
 				}
 			}
-
+			else if (instruction == "label")
+				processLabel(line);
+			else if (instruction == "jump")
+				processJump(line, false);
+			else if (instruction == "condjmp")
+				processJump(line, true);
+			else if (instruction == "condskip")
+				processCondskip(line);
+			else if (instruction == "function")
+				processFunction(line);
+			else if (instruction == "call")
+				processCall(line, false);
+			else if (instruction == "condcall")
+				processCall(line, true);
+			else if (instruction == "return")
+				processReturn(line, false);
+			else if (instruction == "condreturn")
+				processReturn(line, true);
 			// todo remaining instructions
+			else
+				CAGE_THROW_ERROR(Exception, "unknown instruction");
 		}
 
 		void processLabelReplacements()
 		{
-			// todo
+			CAGE_ASSERT(functionIndexToName.size() == functionNameToIndex.size());
+			for (const LabelReplacement &label : labelsReplacements)
+			{
+				uint32 &p = *(uint32 *)(paramsBuffer.data() + label.paramsOffset);
+				CAGE_ASSERT(p == m);
+				auto it = labelNameToInstruction.find(label);
+				if (it == labelNameToInstruction.end())
+				{
+					CAGE_LOG_THROW(stringizer() + label.function + ":" + label.label);
+					CAGE_LOG_THROW(stringizer() + "on " + (label.sourceLine + 1) + "th line");
+					CAGE_THROW_ERROR(Exception, "label not found");
+				}
+				p = it->second;
+			}
 		}
 
-		Holder<BinaryProgram> compile(PointerRange<const char> sourceCode)
+		Holder<Program> compile(PointerRange<const char> sourceCode)
 		{
 			instructions.clear();
 			paramsOffsets.clear();
@@ -951,13 +1038,18 @@ namespace qasm
 			functionIndices.clear();
 			paramsBuffer.free();
 			params = Serializer(paramsBuffer);
+
 			labelsReplacements.clear();
-			labelsPositions.clear();
-			lastFunction = m;
-			lastLine = 0;
+			labelNameToInstruction.clear();
+			functionNameToIndex.clear();
+			functionNameToIndex[""] = 0;
+			functionIndexToName.clear();
+			functionIndexToName[0] = "";
+			currentFunctionIndex = 0;
+			currentSourceLine = 0;
 
 			Holder<LineReader> lines = newLineReader(sourceCode);
-			for (string fullLine; lines->readLine(fullLine); lastLine++)
+			for (string fullLine; lines->readLine(fullLine); currentSourceLine++)
 			{
 				try
 				{
@@ -970,7 +1062,7 @@ namespace qasm
 				}
 				catch (...)
 				{
-					CAGE_LOG_THROW(stringizer() + "on " + (lastLine + 1) + "th line:");
+					CAGE_LOG_THROW(stringizer() + "on " + (currentSourceLine + 1) + "th line:");
 					CAGE_LOG_THROW(fullLine);
 					throw;
 				}
@@ -989,7 +1081,7 @@ namespace qasm
 			p->sourceLines = sourceLines;
 			p->functionIndices = functionIndices;
 			p->params = PointerRangeHolder<const char>(PointerRange<const char>(paramsBuffer));
-			return templates::move(p).cast<BinaryProgram>();
+			return templates::move(p).cast<Program>();
 		}
 	};
 
@@ -998,7 +1090,7 @@ namespace qasm
 		return detail::systemArena().createImpl<Compiler, CompilerImpl>();
 	}
 
-	Holder<BinaryProgram> Compiler::compile(PointerRange<const char> sourceCode)
+	Holder<Program> Compiler::compile(PointerRange<const char> sourceCode)
 	{
 		CompilerImpl *impl = (CompilerImpl *)this;
 		return impl->compile(sourceCode);

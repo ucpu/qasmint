@@ -7,15 +7,16 @@ namespace qasm
 {
 	using namespace cage;
 
-	struct BinaryProgram : private Immovable
+	struct Program : private Immovable
 	{
+		uint32 instructionsCount() const;
 		detail::StringBase<20> functionName(uint32 index) const;
 		PointerRange<const char> sourceCode() const;
 	};
 
 	struct Compiler : private Immovable
 	{
-		Holder<BinaryProgram> compile(PointerRange<const char> sourceCode);
+		Holder<Program> compile(PointerRange<const char> sourceCode);
 	};
 
 	Holder<Compiler> newCompiler();
@@ -32,7 +33,7 @@ namespace qasm
 
 	struct Cpu : private Immovable
 	{
-		void program(const BinaryProgram *binary); // the program must outlive the cpu
+		void program(const Program *binary); // the program must outlive the cpu
 		void reinitialize();
 		void run();
 		void step();
@@ -49,9 +50,11 @@ namespace qasm
 		Holder<PointerRange<const uint32>> tape(uint32 index) const;
 		PointerRange<const uint32> memory(uint32 index) const;
 		void memory(uint32 index, PointerRange<uint32> data); // valid in Initialized state only
+
 		PointerRange<const uint32> callstack() const;
 		uint32 functionIndex() const;
 		uint32 sourceLine() const;
+		uint64 stepIndex() const;
 	};
 
 	struct CpuLimitsConfig
@@ -74,6 +77,7 @@ namespace qasm
 	struct CpuCreateConfig
 	{
 		CpuLimitsConfig limits;
+		uint64 interruptPeriod = m; // the cpu is automatically interrupted every N-th step
 	};
 
 	Holder<Cpu> newCpu(const CpuCreateConfig &config);

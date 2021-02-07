@@ -2,7 +2,13 @@
 
 namespace qasm
 {
-	detail::StringBase<20> BinaryProgram::functionName(uint32 index) const
+	uint32 Program::instructionsCount() const
+	{
+		const ProgramImpl *impl = (const ProgramImpl *)this;
+		return numeric_cast<uint32>(impl->instructions.size());
+	}
+
+	detail::StringBase<20> Program::functionName(uint32 index) const
 	{
 		const ProgramImpl *impl = (const ProgramImpl *)this;
 		if (index == m)
@@ -12,7 +18,7 @@ namespace qasm
 		return impl->functionNames[index];
 	}
 
-	PointerRange<const char> BinaryProgram::sourceCode() const
+	PointerRange<const char> Program::sourceCode() const
 	{
 		const ProgramImpl *impl = (const ProgramImpl *)this;
 		return impl->sourceCode;

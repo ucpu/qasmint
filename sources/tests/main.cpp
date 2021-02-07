@@ -4,7 +4,11 @@
 
 uint32 CageTestCase::counter = 0;
 
-void testBasics();
+void testCompilation();
+void testArithmetics();
+void testStructures();
+void testFlow();
+void testDebugging();
 
 int main()
 {
@@ -12,7 +16,11 @@ int main()
 	log->format.bind<logFormatConsole>();
 	log->output.bind<logOutputStdOut>();
 
-	testBasics();
+	testCompilation();
+	testArithmetics();
+	testStructures();
+	testFlow();
+	testDebugging();
 
 	{
 		CAGE_TESTCASE("all tests done ok");

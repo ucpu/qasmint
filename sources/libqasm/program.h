@@ -186,7 +186,7 @@ namespace qasm
 		exit,        //
 	};
 
-	struct ProgramImpl : public BinaryProgram
+	struct ProgramImpl : public Program
 	{
 		Holder<PointerRange<InstructionEnum>> instructions;
 		Holder<PointerRange<uint32>> paramsOffsets;

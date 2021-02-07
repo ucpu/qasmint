@@ -242,6 +242,7 @@ namespace qasm
 			uint32 registers_[26 + 26] = {};
 			Callstack callstack_;
 			uint32 programCounter = 0; // index of current instruction in the program
+			uint64 stepIndex_ = 0;
 		};
 	}
 
@@ -331,9 +332,19 @@ namespace qasm
 			iset('r' - 'a' + 26, stat.rightmost);
 		}
 
+		void jump(uint32 position)
+		{
+			programCounter = position;
+		}
+
 		void step()
 		{
 			CAGE_ASSERT(state == CpuStateEnum::Running);
+			if ((++stepIndex_ % config.interruptPeriod) == 0)
+			{
+				state = CpuStateEnum::Interrupted;
+				return;
+			}
 			const uint32 pc = programCounter++;
 			Deserializer params = Deserializer(binary->params);
 			params.advance(binary->paramsOffsets[pc]);
@@ -1115,7 +1126,20 @@ namespace qasm
 				set(memories[s].stat());
 			} break;
 			case InstructionEnum::jump:
+			{
+				uint32 pos;
+				params >> pos;
+				jump(pos);
+			} break;
 			case InstructionEnum::condjmp:
+			{
+				if (get('z' - 'a' + 26) != 0)
+				{
+					uint32 pos;
+					params >> pos;
+					jump(pos);
+				}
+			} break;
 			case InstructionEnum::call:
 			case InstructionEnum::condcall:
 			case InstructionEnum::return_:
@@ -1171,7 +1195,7 @@ namespace qasm
 		return detail::systemArena().createImpl<Cpu, CpuImpl>(config);
 	}
 
-	void Cpu::program(const BinaryProgram *binary)
+	void Cpu::program(const Program *binary)
 	{
 		CpuImpl *impl = (CpuImpl *)this;
 		impl->binary = (const ProgramImpl *)binary;
@@ -1324,5 +1348,12 @@ namespace qasm
 		const CpuImpl *impl = (const CpuImpl *)this;
 		CAGE_ASSERT(impl->binary);
 		return impl->binary->sourceLines[impl->programCounter];
+	}
+
+	uint64 Cpu::stepIndex() const
+	{
+		const CpuImpl *impl = (const CpuImpl *)this;
+		CAGE_ASSERT(impl->binary);
+		return impl->stepIndex_;
 	}
 }
