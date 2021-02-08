@@ -77,6 +77,8 @@ namespace qasm
 	struct CpuCreateConfig
 	{
 		CpuLimitsConfig limits;
+		Delegate<bool(string &)> input;
+		Delegate<bool(const string &)> output;
 		uint64 interruptPeriod = m; // the cpu is automatically interrupted every N-th step
 	};
 

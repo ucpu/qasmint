@@ -302,7 +302,7 @@ The structures must be of same type, otherwise the program is ill formed.
 *indswap* [src] - swap `i`-th instance of structure [src] and `j`-th instance of structure [src].
 This instruction terminates the program if either of the structures do not exists.
 
-*stat* [src] - retrieves instructions about the structure [src].
+*stat* [src] - retrieves informations about the structure [src].
 Set register `e` whether the structure is enabled.
 Set register `a` whether any elements in the structure are available (non-empty).
 Set register `f` whether the structure is full.
@@ -313,7 +313,7 @@ Set register `p` to current position on a tape.
 Set register `l` to leftmost index of a valid element on a tape.
 Set register `r` to rightmost index of a valid element on a tape.
 
-*indstat* [src] - retrieves instructions about `i`-th instance of structure [src].
+*indstat* [src] - retrieves informations about `i`-th instance of structure [src].
 
 ## Jumps
 
@@ -361,6 +361,7 @@ Set register `u` whether reading/writing unsigned integer is possible.
 Set register `i` whether reading/writing signed integer is possible.
 Set register `f` whether reading/writing floating point number is possible.
 Set register `c` whether reading/writing a character is possible.
+Set register `w` whether current character is white character (eg. space).
 Set register `s` to current size of the buffer.
 Set register `p` to current position in the buffer.
 
@@ -410,11 +411,6 @@ Set register `z` whether the line was successfully written to the output.
 *rwswap* - swap current input and output buffers.
 
 ## Random
-
-*rdseedany* - initializes random number generator with random seed.
-This instruction is disabled by default.
-
-*rdseed* [a] [b] [c] [d] - initializes random number generator with four unsigned integers taken from [a], [b], [c], and [d].
 
 *rand* [dst] - generate random unsigned integer and store it in [dst].
 

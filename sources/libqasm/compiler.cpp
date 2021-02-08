@@ -3,6 +3,7 @@
 #include <cage-core/string.h>
 #include <cage-core/serialization.h>
 #include <cage-core/memoryBuffer.h>
+#include <cage-core/macros.h>
 
 #include "program.h"
 
@@ -218,7 +219,7 @@ namespace qasm
 			scopeExit();
 			validateName(line);
 			Label label;
-			label.function = split(line);
+			label.label = label.function = split(line);
 			if (labelNameToInstruction.count(label))
 				CAGE_THROW_ERROR(Exception, "function name is not unique");
 			labelNameToInstruction[label] = numeric_cast<uint32>(instructions.size());
@@ -231,7 +232,7 @@ namespace qasm
 		{
 			validateName(line);
 			LabelReplacement label;
-			label.function = split(line);
+			label.label = label.function = split(line);
 			insert(condition ? InstructionEnum::condcall : InstructionEnum::call);
 			label.paramsOffset = numeric_cast<uint32>(paramsBuffer.size());
 			label.sourceLine = currentSourceLine;
@@ -244,559 +245,105 @@ namespace qasm
 			insert(condition ? InstructionEnum::condreturn : InstructionEnum::return_);
 		}
 
+		template<InstructionEnum Opcode, uint32 Registers>
+		bool matchSimpleInstruction(const char *Name, const string &instruction, string &line)
+		{
+			if (instruction != string(Name))
+				return false;
+			insert(Opcode);
+			for (uint32 i = 0; i < Registers; i++)
+				params << getRegister(line);
+			return true;
+		}
+
 		void processLine(string &line)
 		{
 			const string instruction = split(line);
+
+#define MatchSimpleInstruction_0(Name) || matchSimpleInstruction<InstructionEnum::Name, 0>(CAGE_STRINGIZE(Name), instruction, line)
+#define MatchSimpleInstruction_1(Name) || matchSimpleInstruction<InstructionEnum::Name, 1>(CAGE_STRINGIZE(Name), instruction, line)
+#define MatchSimpleInstruction_2(Name) || matchSimpleInstruction<InstructionEnum::Name, 2>(CAGE_STRINGIZE(Name), instruction, line)
+#define MatchSimpleInstruction_3(Name) || matchSimpleInstruction<InstructionEnum::Name, 3>(CAGE_STRINGIZE(Name), instruction, line)
+
 			// registers
-			if (instruction == "reset")
-			{
-				insert(InstructionEnum::reset);
-				params << getRegister(line);
-			}
-			else if (instruction == "set")
+			if (false
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_0, indcpy))
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_1, reset, condrst))
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_2, copy, condcpy))
+				)
+				return;
+			if (instruction == "set")
 			{
 				insert(InstructionEnum::set);
 				params << getRegister(line);
 				params << toUint32(split(line));
+				return;
 			}
-			else if (instruction == "iset")
+			if (instruction == "iset")
 			{
 				insert(InstructionEnum::iset);
 				params << getRegister(line);
 				params << toSint32(split(line));
+				return;
 			}
-			else if (instruction == "fset")
+			if (instruction == "fset")
 			{
 				insert(InstructionEnum::fset);
 				params << getRegister(line);
 				params << toFloat(split(line));
+				return;
 			}
-			else if (instruction == "copy")
-			{
-				insert(InstructionEnum::copy);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "condrst")
-			{
-				insert(InstructionEnum::condrst);
-				params << getRegister(line);
-			}
-			else if (instruction == "condset")
+			if (instruction == "condset")
 			{
 				insert(InstructionEnum::condset);
 				params << getRegister(line);
 				params << toUint32(split(line));
+				return;
 			}
-			else if (instruction == "condiset")
+			if (instruction == "condiset")
 			{
 				insert(InstructionEnum::condiset);
 				params << getRegister(line);
 				params << toSint32(split(line));
+				return;
 			}
-			else if (instruction == "condfset")
+			if (instruction == "condfset")
 			{
 				insert(InstructionEnum::condfset);
 				params << getRegister(line);
 				params << toFloat(split(line));
+				return;
 			}
-			else if (instruction == "condcpy")
-			{
-				insert(InstructionEnum::condcpy);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "indcpy")
-			{
-				insert(InstructionEnum::indcpy);
-			}
-			// arithmetic
-			else if (instruction == "add")
-			{
-				insert(InstructionEnum::add);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "sub")
-			{
-				insert(InstructionEnum::sub);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "mul")
-			{
-				insert(InstructionEnum::mul);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "div")
-			{
-				insert(InstructionEnum::div);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "mod")
-			{
-				insert(InstructionEnum::mod);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "inc")
-			{
-				insert(InstructionEnum::inc);
-				params << getRegister(line);
-			}
-			else if (instruction == "dec")
-			{
-				insert(InstructionEnum::dec);
-				params << getRegister(line);
-			}
-			else if (instruction == "iadd")
-			{
-				insert(InstructionEnum::iadd);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "isub")
-			{
-				insert(InstructionEnum::isub);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "imul")
-			{
-				insert(InstructionEnum::imul);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "idiv")
-			{
-				insert(InstructionEnum::idiv);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "imod")
-			{
-				insert(InstructionEnum::imod);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "iinc")
-			{
-				insert(InstructionEnum::iinc);
-				params << getRegister(line);
-			}
-			else if (instruction == "idec")
-			{
-				insert(InstructionEnum::idec);
-				params << getRegister(line);
-			}
-			else if (instruction == "iabs")
-			{
-				insert(InstructionEnum::iabs);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fadd")
-			{
-				insert(InstructionEnum::fadd);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fsub")
-			{
-				insert(InstructionEnum::fsub);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fmul")
-			{
-				insert(InstructionEnum::fmul);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fdiv")
-			{
-				insert(InstructionEnum::fdiv);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fpow")
-			{
-				insert(InstructionEnum::fpow);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fatan2")
-			{
-				insert(InstructionEnum::fatan2);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fabs")
-			{
-				insert(InstructionEnum::fabs);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fsqrt")
-			{
-				insert(InstructionEnum::fsqrt);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "flog")
-			{
-				insert(InstructionEnum::flog);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fsin")
-			{
-				insert(InstructionEnum::fsin);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fcos")
-			{
-				insert(InstructionEnum::fcos);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "ftan")
-			{
-				insert(InstructionEnum::ftan);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fasin")
-			{
-				insert(InstructionEnum::fasin);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "facos")
-			{
-				insert(InstructionEnum::facos);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fatan")
-			{
-				insert(InstructionEnum::fatan);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "ffloor")
-			{
-				insert(InstructionEnum::ffloor);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fround")
-			{
-				insert(InstructionEnum::fround);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fceil")
-			{
-				insert(InstructionEnum::fceil);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "s2f")
-			{
-				insert(InstructionEnum::s2f);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "u2f")
-			{
-				insert(InstructionEnum::u2f);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "f2s")
-			{
-				insert(InstructionEnum::f2s);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "f2u")
-			{
-				insert(InstructionEnum::f2u);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
+
+			// arithmetics
+			if (false
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_1, inc, dec, iinc, idec))
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_2, iabs, fabs, fsqrt, flog, fsin, fcos, ftan, fasin, facos, fatan, ffloor, fround, fceil, s2f, u2f, f2s, f2u))
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_3, add, sub, mul, div, mod, iadd, isub, imul, idiv, imod, fadd, fsub, fmul, fdiv, fpow, fatan2))
+				)
+				return;
+
 			// logic
-			else if (instruction == "and")
-			{
-				insert(InstructionEnum::and_);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "or")
-			{
-				insert(InstructionEnum::or_);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "xor")
-			{
-				insert(InstructionEnum::xor_);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "not")
-			{
-				insert(InstructionEnum::not_);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "inv")
-			{
-				insert(InstructionEnum::inv);
-				params << getRegister(line);
-			}
-			else if (instruction == "shl")
-			{
-				insert(InstructionEnum::shl);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "shr")
-			{
-				insert(InstructionEnum::shr);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "rol")
-			{
-				insert(InstructionEnum::rol);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "ror")
-			{
-				insert(InstructionEnum::ror);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "band")
-			{
-				insert(InstructionEnum::band);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "bor")
-			{
-				insert(InstructionEnum::bor);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "bxor")
-			{
-				insert(InstructionEnum::bxor);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "bnot")
-			{
-				insert(InstructionEnum::bnot);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "binv")
-			{
-				insert(InstructionEnum::binv);
-				params << getRegister(line);
-			}
+			if (false
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_1, inv, binv))
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_3, shl, shr, rol, ror, band, bor, bxor))
+				|| matchSimpleInstruction<InstructionEnum::not_, 2>("not", instruction, line)
+				|| matchSimpleInstruction<InstructionEnum::bnot, 2>("bnot", instruction, line)
+				|| matchSimpleInstruction<InstructionEnum::and_, 3>("and", instruction, line)
+				|| matchSimpleInstruction<InstructionEnum::or_, 3>("or", instruction, line)
+				|| matchSimpleInstruction<InstructionEnum::xor_, 3>("xor", instruction, line)
+				)
+				return;
+
 			// comparisons
-			else if (instruction == "eq")
-			{
-				insert(InstructionEnum::eq);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "neq")
-			{
-				insert(InstructionEnum::neq);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "lt")
-			{
-				insert(InstructionEnum::lt);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "gt")
-			{
-				insert(InstructionEnum::gt);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "lte")
-			{
-				insert(InstructionEnum::lte);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "gte")
-			{
-				insert(InstructionEnum::gte);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "ieq")
-			{
-				insert(InstructionEnum::ieq);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "ineq")
-			{
-				insert(InstructionEnum::ineq);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "ilt")
-			{
-				insert(InstructionEnum::ilt);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "igt")
-			{
-				insert(InstructionEnum::igt);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "ilte")
-			{
-				insert(InstructionEnum::ilte);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "igte")
-			{
-				insert(InstructionEnum::igte);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "feq")
-			{
-				insert(InstructionEnum::feq);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fneq")
-			{
-				insert(InstructionEnum::fneq);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "flt")
-			{
-				insert(InstructionEnum::flt);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fgt")
-			{
-				insert(InstructionEnum::fgt);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "flte")
-			{
-				insert(InstructionEnum::flte);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fgte")
-			{
-				insert(InstructionEnum::fgte);
-				params << getRegister(line);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fisnan")
-			{
-				insert(InstructionEnum::fisnan);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fisinf")
-			{
-				insert(InstructionEnum::fisinf);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fisfin")
-			{
-				insert(InstructionEnum::fisfin);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "fisnorm")
-			{
-				insert(InstructionEnum::fisnorm);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
-			else if (instruction == "test")
-			{
-				insert(InstructionEnum::test);
-				params << getRegister(line);
-				params << getRegister(line);
-			}
+			if (false
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_2, fisnan, fisinf, fisfin, fisnorm, test))
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_3, eq, neq, lt, gt, lte, gte, ieq, ineq, ilt, igt, ilte, igte, feq, fneq, flt, fgt, flte, fgte))
+				)
+				return;
+
 			// structures
-			else if (instruction == "load")
+			if (instruction == "load")
 			{
 				uint8 dst = getRegister(line);
 				uint8 type, index;
@@ -821,8 +368,9 @@ namespace qasm
 					params << dst << index << address;
 					break;
 				}
+				return;
 			}
-			else if (instruction == "store")
+			if (instruction == "store")
 			{
 				uint8 type, index;
 				uint32 address;
@@ -847,8 +395,9 @@ namespace qasm
 					params << index << address << src;
 					break;
 				}
+				return;
 			}
-			else if (instruction == "indload")
+			if (instruction == "indload")
 			{
 				uint8 dst = getRegister(line);
 				uint8 type, index;
@@ -857,8 +406,9 @@ namespace qasm
 					CAGE_THROW_ERROR(Exception, "indload requires memory pool");
 				insert(InstructionEnum::indload);
 				params << dst << index;
+				return;
 			}
-			else if (instruction == "indstore")
+			if (instruction == "indstore")
 			{
 				uint8 type, index;
 				getStructure(line, type, index);
@@ -867,18 +417,21 @@ namespace qasm
 				uint8 src = getRegister(line);
 				insert(InstructionEnum::indstore);
 				params << index << src;
+				return;
 			}
-			else if (instruction == "indindload")
+			if (instruction == "indindload")
 			{
 				insert(InstructionEnum::indindload);
 				params << getRegister(line);
+				return;
 			}
-			else if (instruction == "indindstore")
+			if (instruction == "indindstore")
 			{
 				insert(InstructionEnum::indindstore);
 				params << getRegister(line);
+				return;
 			}
-			else if (instruction == "pop")
+			if (instruction == "pop")
 			{
 				uint8 dst = getRegister(line);
 				uint8 type, index;
@@ -887,8 +440,9 @@ namespace qasm
 					CAGE_THROW_ERROR(Exception, "pop requires stack");
 				insert(InstructionEnum::pop);
 				params << dst << index;
+				return;
 			}
-			else if (instruction == "push")
+			if (instruction == "push")
 			{
 				uint8 type, index;
 				getStructure(line, type, index);
@@ -897,8 +451,9 @@ namespace qasm
 				uint8 src = getRegister(line);
 				insert(InstructionEnum::push);
 				params << index << src;
+				return;
 			}
-			else if (instruction == "dequeue")
+			if (instruction == "dequeue")
 			{
 				uint8 dst = getRegister(line);
 				uint8 type, index;
@@ -907,8 +462,9 @@ namespace qasm
 					CAGE_THROW_ERROR(Exception, "dequeue requires queue");
 				insert(InstructionEnum::dequeue);
 				params << dst << index;
+				return;
 			}
-			else if (instruction == "enqueue")
+			if (instruction == "enqueue")
 			{
 				uint8 type, index;
 				getStructure(line, type, index);
@@ -917,8 +473,9 @@ namespace qasm
 				uint8 src = getRegister(line);
 				insert(InstructionEnum::enqueue);
 				params << index << src;
+				return;
 			}
-			else if (instruction == "left")
+			if (instruction == "left")
 			{
 				uint8 type, index;
 				getStructure(line, type, index);
@@ -926,8 +483,9 @@ namespace qasm
 					CAGE_THROW_ERROR(Exception, "left requires tape");
 				insert(InstructionEnum::left);
 				params << index;
+				return;
 			}
-			else if (instruction == "right")
+			if (instruction == "right")
 			{
 				uint8 type, index;
 				getStructure(line, type, index);
@@ -935,8 +493,9 @@ namespace qasm
 					CAGE_THROW_ERROR(Exception, "right requires tape");
 				insert(InstructionEnum::right);
 				params << index;
+				return;
 			}
-			else if (instruction == "center")
+			if (instruction == "center")
 			{
 				uint8 type, index;
 				getStructure(line, type, index);
@@ -944,8 +503,9 @@ namespace qasm
 					CAGE_THROW_ERROR(Exception, "center requires tape");
 				insert(InstructionEnum::center);
 				params << index;
+				return;
 			}
-			else if (instruction == "swap")
+			if (instruction == "swap")
 			{
 				uint8 type1, index1, type2, index2;
 				getStructure(line, type1, index1);
@@ -960,8 +520,9 @@ namespace qasm
 				case 3: insert(InstructionEnum::mswap); break;
 				}
 				params << index1 << index2;
+				return;
 			}
-			else if (instruction == "indswap")
+			if (instruction == "indswap")
 			{
 				uint8 type1, index1, type2, index2;
 				getStructure(line, type1, index1);
@@ -977,8 +538,9 @@ namespace qasm
 				case 2: insert(InstructionEnum::indtswap); break;
 				case 3: insert(InstructionEnum::indmswap); break;
 				}
+				return;
 			}
-			else if (instruction == "stat")
+			if (instruction == "stat")
 			{
 				uint8 type, index;
 				getStructure(line, type, index);
@@ -990,8 +552,9 @@ namespace qasm
 				case 3: insert(InstructionEnum::mstat); break;
 				}
 				params << index;
+				return;
 			}
-			else if (instruction == "indstat")
+			if (instruction == "indstat")
 			{
 				uint8 type, index;
 				getStructure(line, type, index);
@@ -1004,28 +567,39 @@ namespace qasm
 				case 2: insert(InstructionEnum::indtstat); break;
 				case 3: insert(InstructionEnum::indmstat); break;
 				}
+				return;
 			}
-			else if (instruction == "label")
-				processLabel(line);
-			else if (instruction == "jump")
-				processJump(line, false);
-			else if (instruction == "condjmp")
-				processJump(line, true);
-			else if (instruction == "condskip")
-				processCondskip(line);
-			else if (instruction == "function")
-				processFunction(line);
-			else if (instruction == "call")
-				processCall(line, false);
-			else if (instruction == "condcall")
-				processCall(line, true);
-			else if (instruction == "return")
-				processReturn(line, false);
-			else if (instruction == "condreturn")
-				processReturn(line, true);
-			// todo remaining instructions
-			else
-				CAGE_THROW_ERROR(Exception, "unknown instruction");
+
+			// jumps
+			if (instruction == "label")
+				return processLabel(line);
+			if (instruction == "jump")
+				return processJump(line, false);
+			if (instruction == "condjmp")
+				return processJump(line, true);
+			if (instruction == "condskip")
+				return processCondskip(line);
+
+			// functions
+			if (instruction == "function")
+				return processFunction(line);
+			if (instruction == "call")
+				return processCall(line, false);
+			if (instruction == "condcall")
+				return processCall(line, true);
+			if (instruction == "return")
+				return processReturn(line, false);
+			if (instruction == "condreturn")
+				return processReturn(line, true);
+
+			// input/output
+			if (false
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_0, rstat, wstat, readln, rreset, rclear, writeln, wreset, wclear, rwswap))
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_1, read, iread, fread, cread, write, iwrite, fwrite, cwrite))
+				)
+				return;
+
+			CAGE_THROW_ERROR(Exception, "unknown instruction");
 		}
 
 		void processLabelReplacements()

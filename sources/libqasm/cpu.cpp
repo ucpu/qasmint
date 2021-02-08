@@ -1,6 +1,8 @@
 #include <cage-core/pointerRangeHolder.h>
 #include <cage-core/serialization.h>
 #include <cage-core/math.h>
+#include <cage-core/string.h>
+#include <cage-core/debug.h>
 
 #include "program.h"
 
@@ -11,7 +13,7 @@ namespace qasm
 {
 	namespace
 	{
-		struct Stat
+		struct StructureStat
 		{
 			uint32 capacity = 0;
 			uint32 size = 0;
@@ -38,9 +40,9 @@ namespace qasm
 		{
 			std::vector<uint32> data;
 
-			Stat stat() const
+			StructureStat stat() const
 			{
-				Stat s;
+				StructureStat s;
 				s.capacity = capacity;
 				s.size = numeric_cast<uint32>(data.size());
 				s.enabled = enabled;
@@ -86,9 +88,9 @@ namespace qasm
 		{
 			std::vector<uint32> data;
 
-			Stat stat() const
+			StructureStat stat() const
 			{
-				Stat s;
+				StructureStat s;
 				s.capacity = capacity;
 				s.size = numeric_cast<uint32>(data.size());
 				s.enabled = enabled;
@@ -136,9 +138,9 @@ namespace qasm
 			sint32 offset = 0;
 			sint32 position = 0;
 
-			Stat stat() const
+			StructureStat stat() const
 			{
-				Stat s;
+				StructureStat s;
 				s.capacity = capacity;
 				s.size = numeric_cast<uint32>(data.size());
 				s.position = position;
@@ -200,9 +202,9 @@ namespace qasm
 			std::vector<uint32> data;
 			bool readOnly = false;
 
-			Stat stat() const
+			StructureStat stat() const
 			{
-				Stat s;
+				StructureStat s;
 				s.capacity = capacity;
 				s.size = numeric_cast<uint32>(data.size());
 				s.enabled = enabled;
@@ -233,6 +235,206 @@ namespace qasm
 			uint32 capacity = 0;
 		};
 
+		struct IoStat
+		{
+			uint32 size = 0;
+			uint32 position = 0;
+			bool u = false;
+			bool i = false;
+			bool f = false;
+			bool c = false;
+			bool w = false;
+		};
+
+		bool ioCharValid(uint32 c)
+		{
+			if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))
+				return true;
+
+			switch (c)
+			{
+			case ' ':
+			case '-':
+			case '+':
+			case '.':
+			case '_':
+			case '@':
+			case '#':
+			case '*':
+			case '/':
+			case ',':
+			case '(':
+			case ')':
+			case '<':
+			case '>':
+			case '=':
+			case '?':
+			case '!':
+			case ':':
+			case ';':
+				return true;
+			}
+
+			return false;
+		}
+
+		bool ioCharWhite(uint32 c)
+		{
+			return c == ' ';
+		}
+
+		string ioFilter(const string &str)
+		{
+			string r;
+			for (const char c : str)
+			{
+				if (ioCharValid(c))
+					r += string(c);
+			}
+			return r;
+		}
+
+		struct IoBuffer
+		{
+			string buffer;
+			uint32 position = 0;
+
+			static constexpr uint32 capacity = 100;
+			static_assert(capacity < string::MaxLength);
+
+			IoStat rstat() const
+			{
+				CAGE_ASSERT(buffer == ioFilter(buffer));
+				IoStat s;
+				s.size = buffer.size();
+				s.position = position;
+				{
+					const string w = peekWord();
+					detail::OverrideException oe;
+					try
+					{
+						toUint32(w);
+						s.u = true;
+					}
+					catch (...)
+					{
+						s.u = false;
+					}
+					try
+					{
+						toSint32(w);
+						s.i = true;
+					}
+					catch (...)
+					{
+						s.i = false;
+					}
+					try
+					{
+						toFloat(w);
+						s.f = true;
+					}
+					catch (...)
+					{
+						s.f = false;
+					}
+				}
+				s.c = position < buffer.size();
+				s.w = position < buffer.size() && ioCharWhite(buffer[position]);
+				return s;
+			}
+
+			IoStat wstat() const
+			{
+				CAGE_ASSERT(buffer == ioFilter(buffer));
+				IoStat s;
+				s.size = buffer.size();
+				s.position = position;
+				s.u = s.i = s.f = s.c = position < capacity;
+				s.w = position < buffer.size() && ioCharWhite(buffer[position]);
+				return s;
+			}
+
+			string peekWord() const
+			{
+				if (position >= buffer.size())
+					return "";
+				string s = remove(buffer, 0, position);
+				return split(s);
+			}
+
+			string getWord()
+			{
+				if (position >= buffer.size())
+					CAGE_THROW_ERROR(Exception, "read out of bounds");
+				string s = remove(buffer, 0, position);
+				string w = split(s);
+				position += w.size();
+				return w;
+			}
+
+			uint32 read()
+			{
+				return toUint32(getWord());
+			}
+
+			sint32 iread()
+			{
+				return toSint32(getWord());
+			}
+
+			real fread()
+			{
+				return toFloat(getWord());
+			}
+
+			uint32 cread()
+			{
+				if (position >= buffer.size())
+					CAGE_THROW_ERROR(Exception, "cread: out of bounds");
+				return buffer[position++];
+			}
+
+			void putWord(const string w)
+			{
+				if (position >= capacity)
+					CAGE_THROW_ERROR(Exception, "write out of bounds");
+				buffer = replace(buffer, position, w.length(), w);
+			}
+
+			void write(uint32 value)
+			{
+				putWord(stringizer() + value);
+			}
+
+			void iwrite(sint32 value)
+			{
+				putWord(stringizer() + value);
+			}
+
+			void fwrite(real value)
+			{
+				putWord(stringizer() + value);
+			}
+
+			void cwrite(uint32 value)
+			{
+				CAGE_ASSERT(ioCharValid(value));
+				putWord(string(numeric_cast<char>(value)));
+			}
+
+			void reset()
+			{
+				position = 0;
+			}
+
+			void clear()
+			{
+				buffer = "";
+				position = 0;
+			}
+		};
+
 		struct DataState
 		{
 			Stack stacks[26] = {};
@@ -241,6 +443,7 @@ namespace qasm
 			Memory memories[26] = {};
 			uint32 registers_[26 + 26] = {};
 			Callstack callstack_;
+			IoBuffer inputBuffer, outputBuffer;
 			uint32 programCounter = 0; // index of current instruction in the program
 			uint64 stepIndex_ = 0;
 		};
@@ -319,7 +522,7 @@ namespace qasm
 			registers_[index] = *(uint32 *)&value;
 		}
 
-		void set(const Stat &stat)
+		void set(const StructureStat &stat)
 		{
 			set('e' - 'a' + 26, stat.enabled);
 			set('a' - 'a' + 26, stat.size > 0);
@@ -330,6 +533,17 @@ namespace qasm
 			iset('p' - 'a' + 26, stat.position);
 			iset('l' - 'a' + 26, stat.leftmost);
 			iset('r' - 'a' + 26, stat.rightmost);
+		}
+
+		void set(const IoStat &stat)
+		{
+			set('u' - 'a' + 26, stat.u);
+			set('i' - 'a' + 26, stat.i);
+			set('f' - 'a' + 26, stat.f);
+			set('c' - 'a' + 26, stat.c);
+			set('w' - 'a' + 26, stat.w);
+			set('s' - 'a' + 26, stat.size);
+			set('p' - 'a' + 26, stat.position);
 		}
 
 		void jump(uint32 position)
@@ -1181,24 +1395,112 @@ namespace qasm
 					fncReturn();
 			} break;
 			case InstructionEnum::rstat:
+			{
+				set(inputBuffer.rstat());
+			} break;
 			case InstructionEnum::wstat:
+			{
+				set(inputBuffer.wstat());
+			} break;
 			case InstructionEnum::read:
+			{
+				uint8 d;
+				params >> d;
+				set(d, inputBuffer.read());
+			} break;
 			case InstructionEnum::iread:
+			{
+				uint8 d;
+				params >> d;
+				iset(d, inputBuffer.iread());
+			} break;
 			case InstructionEnum::fread:
+			{
+				uint8 d;
+				params >> d;
+				fset(d, inputBuffer.fread());
+			} break;
 			case InstructionEnum::cread:
+			{
+				uint8 d;
+				params >> d;
+				set(d, inputBuffer.cread());
+			} break;
 			case InstructionEnum::readln:
+			{
+				string l;
+				if (config.input && config.input(l))
+				{
+					string k = ioFilter(l);
+					inputBuffer.reset();
+					inputBuffer.buffer = k;
+					set('f' - 'a' + 26, l == k);
+					set('z' - 'a' + 26, 1);
+				}
+				else
+				{
+					set('f' - 'a' + 26, 0);
+					set('z' - 'a' + 26, 0);
+				}
+			} break;
 			case InstructionEnum::rreset:
+			{
+				inputBuffer.reset();
+			} break;
 			case InstructionEnum::rclear:
+			{
+				inputBuffer.clear();
+			} break;
 			case InstructionEnum::write:
+			{
+				uint8 s;
+				params >> s;
+				outputBuffer.write(get(s));
+			} break;
 			case InstructionEnum::iwrite:
+			{
+				uint8 s;
+				params >> s;
+				outputBuffer.iwrite(iget(s));
+			} break;
 			case InstructionEnum::fwrite:
+			{
+				uint8 s;
+				params >> s;
+				outputBuffer.fwrite(fget(s));
+			} break;
 			case InstructionEnum::cwrite:
+			{
+				uint8 s;
+				params >> s;
+				uint32 c = get(s);
+				if (ioCharValid(c))
+					outputBuffer.cwrite(c);
+				else
+					CAGE_THROW_ERROR(Exception, "cwrite: invalid character");
+			} break;
 			case InstructionEnum::writeln:
+			{
+				string l;
+				std::swap(l, outputBuffer.buffer);
+				outputBuffer.reset();
+				CAGE_ASSERT(l == ioFilter(l));
+				set('z' - 'a' + 26, config.output && config.output(l));
+			} break;
 			case InstructionEnum::wreset:
+			{
+				outputBuffer.reset();
+			} break;
 			case InstructionEnum::wclear:
+			{
+				outputBuffer.clear();
+			} break;
 			case InstructionEnum::rwswap:
-			case InstructionEnum::rdseedany:
-			case InstructionEnum::rdseed:
+			{
+				CAGE_ASSERT(inputBuffer.buffer == ioFilter(inputBuffer.buffer));
+				CAGE_ASSERT(outputBuffer.buffer == ioFilter(outputBuffer.buffer));
+				std::swap(inputBuffer, outputBuffer);
+			} break;
 			case InstructionEnum::rand:
 			case InstructionEnum::irand:
 			case InstructionEnum::frand:

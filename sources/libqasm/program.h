@@ -74,7 +74,7 @@ namespace qasm
 		bnot,        // R R
 		binv,        // R
 
-		// conditions
+		// comparisons
 		eq,          // R R R
 		neq,         // R R R
 		lt,          // R R R
@@ -153,27 +153,25 @@ namespace qasm
 		condreturn,  //
 
 		// input/output
-		rstat,
-		wstat,
-		read,
-		iread,
-		fread,
-		cread,
-		readln,
-		rreset,
-		rclear,
-		write,
-		iwrite,
-		fwrite,
-		cwrite,
-		writeln,
-		wreset,
-		wclear,
-		rwswap,
+		rstat,       //
+		wstat,       //
+		read,        // R
+		iread,       // R
+		fread,       // R
+		cread,       // R
+		readln,      //
+		rreset,      //
+		rclear,      //
+		write,       // R
+		iwrite,      // R
+		fwrite,      // R
+		cwrite,      // R
+		writeln,     //
+		wreset,      //
+		wclear,      //
+		rwswap,      //
 
 		// random
-		rdseedany,   //
-		rdseed,      // R R R R
 		rand,        // R
 		irand,       // R
 		frand,       // R

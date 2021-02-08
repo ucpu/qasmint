@@ -8,6 +8,7 @@ void testCompilation();
 void testArithmetics();
 void testStructures();
 void testFlow();
+void testInputOutput();
 void testDebugging();
 
 int main()
@@ -20,6 +21,7 @@ int main()
 	testArithmetics();
 	testStructures();
 	testFlow();
+	testInputOutput();
 	testDebugging();
 
 	{
