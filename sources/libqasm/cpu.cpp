@@ -3,6 +3,7 @@
 #include <cage-core/math.h>
 #include <cage-core/string.h>
 #include <cage-core/debug.h>
+#include <cage-core/random.h>
 
 #include "program.h"
 
@@ -1502,8 +1503,23 @@ namespace qasm
 				std::swap(inputBuffer, outputBuffer);
 			} break;
 			case InstructionEnum::rand:
+			{
+				uint8 d;
+				params >> d;
+				set(d, (uint32)detail::getApplicationRandomGenerator().next());
+			} break;
 			case InstructionEnum::irand:
+			{
+				uint8 d;
+				params >> d;
+				iset(d, (sint32)detail::getApplicationRandomGenerator().next());
+			} break;
 			case InstructionEnum::frand:
+			{
+				uint8 d;
+				params >> d;
+				fset(d, detail::getApplicationRandomGenerator().randomChance());
+			} break;
 			case InstructionEnum::profiling:
 			case InstructionEnum::tracing:
 				CAGE_THROW_ERROR(NotImplemented, "not yet implemented instruction");

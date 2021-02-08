@@ -592,6 +592,18 @@ namespace qasm
 				)
 				return;
 
+			// random
+			if (false
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_1, rand, irand, frand))
+				)
+				return;
+
+			// miscellaneous
+			if (false
+				CAGE_EVAL_SMALL(CAGE_EXPAND_ARGS(MatchSimpleInstruction_0, breakpoint, terminate))
+				)
+				return;
+
 			CAGE_THROW_ERROR(Exception, "unknown instruction");
 		}
 

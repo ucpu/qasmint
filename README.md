@@ -21,7 +21,7 @@ This makes it awesome tool for learning algorithmic complexity and for comparing
 This program generates 1000 random numbers and prints them to output.
 
 randgen.qasm:
-```
+```bash
 set I 0       # count of generated numbers
 set T 1000    # count of numbers to generate
 label Loop
@@ -38,7 +38,7 @@ condjmp Loop  # go generate another number if we are below the limit
 This program reads all numbers from input, sorts them, and prints them to output.
 
 sort.qasm:
-```
+```bash
 # read input
 set C 0             # number of elements
 label InputBegin
@@ -77,9 +77,9 @@ right TA            # move the head back
 load R TA           # load value to register R
 lte z L R           # compare values in registers L and R and store the result in register Z
 condjmp NextPair    # skip some instructions if z is true
-store TA R          # store value from register R onto the tape
+store TA L          # store value from register L onto the tape
 left TA             # move head one left again
-store TA L          # store value from L
+store TA R          # store value from R
 right TA            # and move the head back again
 set M 1             # mark that we made a change
 label NextPair
@@ -95,13 +95,13 @@ condjmp SortBegin   # go start another sorting pass if we made any modifications
 center TA           # move the head on tape A to the initial position
 set Z 0             # count of outputted numbers
 label Output
-gt z C Z            # do we have more numbers to output?
+gte z Z C           # do we have more numbers to output?
 condjmp Done        # no, we do not
 load V TA           # load number from the tape A into register V
 write V             # write value from register V into output buffer
 writeln             # flush the output buffer to standard output
 right TA            # move the head on tape A one element to the right
-dec C               # decrement count of numbers to output
+inc Z               # increment count of outputted numbers
 jump Output         # go try output another number
 
 label Done
@@ -414,7 +414,7 @@ Set register `z` whether the line was successfully written to the output.
 
 *irand* [dst] - generate random signed integer and store it in [dst].
 
-*frand* [dst] - generate random floating point number and store it in [dst].
+*frand* [dst] - generate random floating point number in range 0 (inclusive) to 1 (exclusive) and store it in [dst].
 
 ## Miscelaneous
 
