@@ -209,11 +209,6 @@ namespace qasm
 			params << uint32(m); // this value will be replaced by address of the label after parsing the source code has finished
 		}
 
-		void processCondskip(string &line)
-		{
-			CAGE_THROW_ERROR(NotImplemented, "not yet implemented");
-		}
-
 		void processFunction(string &line)
 		{
 			scopeExit();
@@ -577,8 +572,6 @@ namespace qasm
 				return processJump(line, false);
 			if (instruction == "condjmp")
 				return processJump(line, true);
-			if (instruction == "condskip")
-				return processCondskip(line);
 
 			// functions
 			if (instruction == "function")

@@ -76,12 +76,13 @@ load L TA           # load value from tape A to register L
 right TA            # move the head back
 load R TA           # load value to register R
 lte z L R           # compare values in registers L and R and store the result in register Z
-condskip 5          # skip 5 instructions if z is true
+condjmp NextPair    # skip some instructions if z is true
 store TA R          # store value from register R onto the tape
 left TA             # move head one left again
 store TA L          # store value from L
 right TA            # and move the head back again
 set M 1             # mark that we made a change
+label NextPair
 right TA            # move head one right - this is the first instruction to execute after the skip
 jump Sorting        # go try sort next pair of elements
 
@@ -324,9 +325,6 @@ Labels are scoped within their function, and must be unique in their scope.
 *jump* [label] - unconditionally jumps to [label].
 
 *condjmp* [label] - if value in `z` evaluates true, jump to [label], otherwise do nothing.
-
-*condskip* [literal] - if value in `z` evaluates true, skip *unsigned integer* [literal] count of *instructions*, otherwise do nothing.
-If the count leads outside the scope of current function, the program is ill formed.
 
 No jumps may cross function boundaries.
 
