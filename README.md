@@ -14,6 +14,8 @@ This is useful in teaching how they work.
 Every run of the processor will count instructions executed.
 This makes it awesome tool for learning algorithmic complexity and for comparing different programs solving same tasks.
 
+The qASM compiler and cpu simulator are implemented in library that can be linked in your own application.
+
 # Example Programs
 
 ## Generate random numbers
@@ -111,7 +113,13 @@ label Done
 
 Example running the aforementioned programs, chained together:
 
-`./qasmint randgen.qasm | tee random.numbers | ./qasmint sort.qasm | tee sorted.numbers`
+```bash
+./qasmint -f -p randgen.qasm | tee random.numbers | ./qasmint -f -p sort.qasm | tee sorted.numbers
+```
+
+- `-f` - suppresses logging to standard output (only output from the qasm program is printed)
+- `-p` - path to file with source code of the program
+- `tee` - standard linux program to duplicate its input to both file and its own standard output - it is used here to allow examining the numbers
 
 # Processor
 

@@ -1,3 +1,5 @@
+#include <cage-core/lineReader.h>
+
 #include "program.h"
 
 namespace qasm
@@ -11,8 +13,6 @@ namespace qasm
 	detail::StringBase<20> Program::functionName(uint32 index) const
 	{
 		const ProgramImpl *impl = (const ProgramImpl *)this;
-		if (index == m)
-			return "";
 		if (index >= impl->functionNames.size())
 			CAGE_THROW_ERROR(Exception, "program function index out of range");
 		return impl->functionNames[index];
@@ -22,5 +22,15 @@ namespace qasm
 	{
 		const ProgramImpl *impl = (const ProgramImpl *)this;
 		return impl->sourceCode;
+	}
+
+	string Program::sourceCodeLine(uint32 index) const
+	{
+		const ProgramImpl *impl = (const ProgramImpl *)this;
+		Holder<LineReader> reader = newLineReader(impl->sourceCode);
+		string line;
+		while (index--)
+			reader->readLine(line);
+		return line;
 	}
 }

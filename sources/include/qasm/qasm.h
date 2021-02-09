@@ -12,6 +12,7 @@ namespace qasm
 		uint32 instructionsCount() const;
 		detail::StringBase<20> functionName(uint32 index) const;
 		PointerRange<const char> sourceCode() const;
+		string sourceCodeLine(uint32 index) const;
 	};
 
 	struct Compiler : private Immovable

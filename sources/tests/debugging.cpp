@@ -50,4 +50,23 @@ jump Start
 		CAGE_TEST(cpu->registers()[0] == 14);
 		CAGE_TEST(interrupts == 3);
 	}
+
+	{
+		CAGE_TESTCASE("function names");
+		constexpr const char source[] = R"asm(
+call AwesomePony
+
+function AwesomePony
+return
+)asm";
+		Holder<Program> program = newCompiler()->compile(source);
+		Holder<Cpu> cpu = newCpu({});
+		cpu->program(+program);
+		CAGE_TEST(cpu->state() == CpuStateEnum::Initialized);
+		CAGE_TEST(program->functionName(cpu->functionIndex()) == "");
+		cpu->step();
+		CAGE_TEST(program->functionName(cpu->functionIndex()) == "AwesomePony");
+		cpu->run();
+		CAGE_TEST(program->functionName(cpu->functionIndex()) == "");
+	}
 }

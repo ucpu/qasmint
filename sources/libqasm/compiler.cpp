@@ -8,6 +8,7 @@
 #include "program.h"
 
 #include <map>
+#include <vector>
 
 namespace qasm
 {
@@ -166,7 +167,7 @@ namespace qasm
 		std::vector<LabelReplacement> labelsReplacements; // which positions in parameters should be updated to what position of label in a function
 		std::map<Label, uint32> labelNameToInstruction;
 		std::map<Name, uint32> functionNameToIndex;
-		std::map<uint32, Name> functionIndexToName;
+		PointerRangeHolder<Name> functionIndexToName;
 		uint32 currentFunctionIndex = 0;
 		uint32 currentSourceLine = 0;
 
@@ -183,6 +184,8 @@ namespace qasm
 			// leaving function without return terminates the program
 			// leaving program scope is successful exit
 			insert(currentFunctionIndex == 0 ? InstructionEnum::exit : InstructionEnum::unreachable);
+			// better function name detection
+			insert(InstructionEnum::nop);
 		}
 
 		void processLabel(string &line)
@@ -220,7 +223,7 @@ namespace qasm
 			labelNameToInstruction[label] = numeric_cast<uint32>(instructions.size());
 			currentFunctionIndex++;
 			functionNameToIndex[label.function] = currentFunctionIndex;
-			functionIndexToName[currentFunctionIndex] = label.function;
+			functionIndexToName.push_back(label.function);
 		}
 
 		void processCall(string &line, bool condition)
@@ -640,7 +643,7 @@ namespace qasm
 			functionNameToIndex.clear();
 			functionNameToIndex[""] = 0;
 			functionIndexToName.clear();
-			functionIndexToName[0] = "";
+			functionIndexToName.push_back("");
 			currentFunctionIndex = 0;
 			currentSourceLine = 0;
 
@@ -677,6 +680,7 @@ namespace qasm
 			p->sourceLines = sourceLines;
 			p->functionIndices = functionIndices;
 			p->params = PointerRangeHolder<const char>(PointerRange<const char>(paramsBuffer));
+			p->functionNames = functionIndexToName;
 			return templates::move(p).cast<Program>();
 		}
 	};
