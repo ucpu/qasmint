@@ -39,7 +39,7 @@ condjmp Loop  # go generate another number if we are below the limit
 
 This program reads all numbers from input, sorts them, and prints them to output.
 
-sort.qasm:
+bubblesort.qasm:
 ```bash
 # read input
 set C 0             # number of elements
@@ -114,7 +114,7 @@ label Done
 Example running the aforementioned programs, chained together:
 
 ```bash
-./qasmint -f -p randgen.qasm | tee random.numbers | ./qasmint -f -p sort.qasm | tee sorted.numbers
+./qasmint -f -p randgen.qasm | tee random.numbers | ./qasmint -f -p bubblesort.qasm | tee sorted.numbers
 ```
 
 - `-f` - suppresses logging to standard output (only output from the qasm program is printed)
