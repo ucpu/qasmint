@@ -442,6 +442,8 @@ Reaching this instruction when disabled does not terminate the program.
 
 # Profiling And Tracing
 
+> _Note:_ This is still work in progress.
+
 You may configure `qasmint` to trace and/or profile what is the program doing.
 This may be useful to debug misbehaving program or to optimize slow algorithms.
 

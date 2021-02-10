@@ -27,7 +27,7 @@ cage_ide_sort_files(qasm-tests)
 cage_ide_working_dir_in_place(qasm-tests)
 
 ########
-# APP
+# APPS
 ########
 
 file(GLOB_RECURSE qasmint-sources "qasmint/*")
@@ -36,3 +36,10 @@ target_link_libraries(qasmint qasm)
 cage_ide_category(qasmint qasm)
 cage_ide_sort_files(qasmint)
 cage_ide_working_dir_in_place(qasmint)
+
+file(GLOB_RECURSE imgmod-sources "imgmod/*")
+add_executable(imgmod ${imgmod-sources})
+target_link_libraries(imgmod qasm)
+cage_ide_category(imgmod qasm)
+cage_ide_sort_files(imgmod)
+cage_ide_working_dir_in_place(imgmod)

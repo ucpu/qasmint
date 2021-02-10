@@ -50,7 +50,7 @@ namespace qasm
 		Holder<PointerRange<const uint32>> queue(uint32 index) const;
 		Holder<PointerRange<const uint32>> tape(uint32 index) const;
 		PointerRange<const uint32> memory(uint32 index) const;
-		void memory(uint32 index, PointerRange<uint32> data); // valid in Initialized state only
+		void memory(uint32 index, PointerRange<const uint32> data); // valid in Initialized state only
 
 		PointerRange<const uint32> callstack() const;
 		uint32 functionIndex() const;
@@ -72,7 +72,7 @@ namespace qasm
 		uint32 callstackCapacity = 1000;
 	};
 
-	CpuLimitsConfig limitsFromIni(Ini *ini);
+	CpuLimitsConfig limitsFromIni(Ini *ini, const CpuLimitsConfig &defaults = {});
 	void limitsToIni(const CpuLimitsConfig &limits, Ini *ini);
 
 	struct CpuCreateConfig

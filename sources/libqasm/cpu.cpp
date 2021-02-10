@@ -232,7 +232,7 @@ namespace qasm
 
 		struct Callstack
 		{
-			std::vector<uint16> data;
+			std::vector<uint32> data;
 			uint32 capacity = 0;
 		};
 
@@ -1677,19 +1677,19 @@ namespace qasm
 		return impl->memories[index].data;
 	}
 
-	void Cpu::memory(uint32 index, PointerRange<uint32> data)
+	void Cpu::memory(uint32 index, PointerRange<const uint32> data)
 	{
 		CpuImpl *impl = (CpuImpl *)this;
 		CAGE_ASSERT(index < 26);
-		CAGE_ASSERT(impl->memories[index].data.size() == data.size());
+		if (impl->memories[index].data.size() < data.size())
+			CAGE_THROW_ERROR(Exception, "insufficient memory pool size");
 		detail::memcpy(impl->memories[index].data.data(), data.data(), data.size() * sizeof(uint32));
 	}
 
 	PointerRange<const uint32> Cpu::callstack() const
 	{
 		CpuImpl *impl = (CpuImpl *)this;
-		// todo
-		return {};
+		return impl->callstack_.data;
 	}
 
 	uint32 Cpu::functionIndex() const

@@ -4,9 +4,9 @@
 
 namespace qasm
 {
-	CpuLimitsConfig limitsFromIni(Ini *ini)
+	CpuLimitsConfig limitsFromIni(Ini *ini, const CpuLimitsConfig &defaults)
 	{
-		CpuLimitsConfig limits;
+		CpuLimitsConfig limits = defaults;
 
 		{ // memories
 			for (uint32 i = 0; i < 26; i++)
