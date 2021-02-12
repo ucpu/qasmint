@@ -273,4 +273,39 @@ jump Start
 )asm";
 		CAGE_TEST_THROWN(newCompiler()->compile(source));
 	}
+
+	{
+		CAGE_TESTCASE("reuse compiler");
+		Holder<Compiler> compiler = newCompiler();
+		{
+			constexpr const char source[] = R"asm(
+set A 13
+)asm";
+			Holder<Program> program = compiler->compile(source);
+			Holder<Cpu> cpu = newCpu({});
+			cpu->program(+program);
+			cpu->run();
+			CAGE_TEST(cpu->registers()[0] == 13);
+		}
+		{
+			constexpr const char source[] = R"asm(
+set A 42
+)asm";
+			Holder<Program> program = compiler->compile(source);
+			Holder<Cpu> cpu = newCpu({});
+			cpu->program(+program);
+			cpu->run();
+			CAGE_TEST(cpu->registers()[0] == 42);
+		}
+		{
+			constexpr const char source[] = R"asm(
+set A 256
+)asm";
+			Holder<Program> program = compiler->compile(source);
+			Holder<Cpu> cpu = newCpu({});
+			cpu->program(+program);
+			cpu->run();
+			CAGE_TEST(cpu->registers()[0] == 256);
+		}
+	}
 }

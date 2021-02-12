@@ -153,24 +153,27 @@ namespace qasm
 			if (address != 0)
 				CAGE_THROW_ERROR(Exception, "address specifier is forbidden here");
 		}
+
+		struct DataState
+		{
+			PointerRangeHolder<InstructionEnum> instructions;
+			PointerRangeHolder<uint32> paramsOffsets;
+			PointerRangeHolder<uint32> sourceLines;
+			PointerRangeHolder<uint32> functionIndices;
+			MemoryBuffer paramsBuffer;
+			Serializer params = Serializer(paramsBuffer);
+
+			std::vector<LabelReplacement> labelsReplacements; // which positions in parameters should be updated to what position of label in a function
+			std::map<Label, uint32> labelNameToInstruction;
+			std::map<Name, uint32> functionNameToIndex;
+			PointerRangeHolder<Name> functionIndexToName;
+			uint32 currentFunctionIndex = 0;
+			uint32 currentSourceLine = 0;
+		};
 	}
 
-	struct CompilerImpl : public Compiler
+	struct CompilerImpl : public Compiler, public DataState
 	{
-		PointerRangeHolder<InstructionEnum> instructions;
-		PointerRangeHolder<uint32> paramsOffsets;
-		PointerRangeHolder<uint32> sourceLines;
-		PointerRangeHolder<uint32> functionIndices;
-		MemoryBuffer paramsBuffer;
-		Serializer params = Serializer(paramsBuffer);
-
-		std::vector<LabelReplacement> labelsReplacements; // which positions in parameters should be updated to what position of label in a function
-		std::map<Label, uint32> labelNameToInstruction;
-		std::map<Name, uint32> functionNameToIndex;
-		PointerRangeHolder<Name> functionIndexToName;
-		uint32 currentFunctionIndex = 0;
-		uint32 currentSourceLine = 0;
-
 		void insert(InstructionEnum instruction)
 		{
 			instructions.push_back(instruction);
@@ -631,21 +634,10 @@ namespace qasm
 
 		Holder<Program> compile(PointerRange<const char> sourceCode)
 		{
-			instructions.clear();
-			paramsOffsets.clear();
-			sourceLines.clear();
-			functionIndices.clear();
-			paramsBuffer.free();
-			params = Serializer(paramsBuffer);
-
-			labelsReplacements.clear();
-			labelNameToInstruction.clear();
-			functionNameToIndex.clear();
+			(DataState &)*this = DataState();
+			params = Serializer(paramsBuffer); // update the buffer the serializer uses
 			functionNameToIndex[""] = 0;
-			functionIndexToName.clear();
 			functionIndexToName.push_back("");
-			currentFunctionIndex = 0;
-			currentSourceLine = 0;
 
 			Holder<LineReader> lines = newLineReader(sourceCode);
 			for (string fullLine; lines->readLine(fullLine); currentSourceLine++)
